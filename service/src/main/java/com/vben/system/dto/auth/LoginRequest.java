@@ -15,9 +15,7 @@ public class LoginRequest {
     @NotBlank
     private String password;
     /** 验证码Key */
-    @NotBlank
     private String captchaKey;
     /** 验证码 */
-    @NotBlank
     private String captchaCode;
 }

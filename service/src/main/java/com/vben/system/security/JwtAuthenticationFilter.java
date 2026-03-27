@@ -40,6 +40,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     filterChain.doFilter(request, response);
                     return;
                 }
+                String tokenType = claims.get("typ", String.class);
+                // 兼容历史 access token：旧 token 不带 typ，允许在过渡期继续使用
+                if (StringUtils.hasText(tokenType) && !"access".equals(tokenType)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 String userId = claims.getSubject();
                 Integer tokenVersion = claims.get("ver", Integer.class);
                 String versionInRedis = redisTemplate.opsForValue().get("auth:token:version:" + userId);

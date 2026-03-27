@@ -18,6 +18,12 @@ export function useFormSchema(): VbenFormSchema[] {
       label: $t('system.user.nickname'),
       rules: 'required',
     },
+    {
+      component: 'Input',
+      fieldName: 'deptId',
+      label: $t('system.user.dept'),
+      rules: 'required',
+    },
     { component: 'Input', fieldName: 'email', label: $t('system.user.email') },
     {
       component: 'Input',
@@ -36,6 +42,14 @@ export function useFormSchema(): VbenFormSchema[] {
           { label: $t('common.enabled'), value: 1 },
           { label: $t('common.disabled'), value: 0 },
         ],
+      },
+    },
+    {
+      component: 'InputPassword',
+      fieldName: 'password',
+      label: $t('authentication.password'),
+      dependencies: {
+        show: (values) => !values.id,
       },
     },
     {
