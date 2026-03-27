@@ -1,0 +1,61 @@
+CREATE TABLE IF NOT EXISTS sys_dept (
+    id BIGINT PRIMARY KEY,
+    pid BIGINT DEFAULT 0,
+    name VARCHAR(64) NOT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    remark VARCHAR(255),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sys_role (
+    id BIGINT PRIMARY KEY,
+    name VARCHAR(64) NOT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    remark VARCHAR(255),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sys_menu (
+    id BIGINT PRIMARY KEY,
+    pid BIGINT DEFAULT 0,
+    name VARCHAR(64) NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    component VARCHAR(255),
+    auth_code VARCHAR(255),
+    meta_json TEXT,
+    status SMALLINT NOT NULL DEFAULT 1,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sys_user (
+    id BIGINT PRIMARY KEY,
+    username VARCHAR(64) UNIQUE NOT NULL,
+    nickname VARCHAR(64) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    dept_id BIGINT,
+    email VARCHAR(128),
+    mobile VARCHAR(32),
+    status SMALLINT NOT NULL DEFAULT 1,
+    data_scope SMALLINT NOT NULL DEFAULT 1,
+    remark VARCHAR(255),
+    last_login_time TIMESTAMP,
+    last_login_ip VARCHAR(64),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sys_user_role (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id)
+);
+
+CREATE TABLE IF NOT EXISTS sys_role_menu (
+    role_id BIGINT NOT NULL,
+    menu_id BIGINT NOT NULL,
+    PRIMARY KEY (role_id, menu_id)
+);
