@@ -41,7 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
                 String tokenType = claims.get("typ", String.class);
-                if (!"access".equals(tokenType)) {
+                // 兼容历史 access token：旧 token 不带 typ，允许在过渡期继续使用
+                if (StringUtils.hasText(tokenType) && !"access".equals(tokenType)) {
                     filterChain.doFilter(request, response);
                     return;
                 }

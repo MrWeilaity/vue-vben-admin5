@@ -68,7 +68,8 @@ public class AuthService {
         }
         var claims = tokenService.parse(refreshToken);
         String tokenType = claims.get("typ", String.class);
-        if (!"refresh".equals(tokenType)) {
+        // 兼容历史 refresh token：旧 token 不带 typ，允许在过渡期继续使用
+        if (StringUtils.hasText(tokenType) && !"refresh".equals(tokenType)) {
             throw new RuntimeException("token 类型错误");
         }
         Long userId = Long.valueOf(claims.getSubject());

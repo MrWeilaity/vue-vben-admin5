@@ -48,6 +48,9 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'InputPassword',
       fieldName: 'password',
       label: $t('authentication.password'),
+      dependencies: {
+        show: (values) => !values.id,
+      },
     },
     {
       component: 'Textarea',
