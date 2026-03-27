@@ -40,6 +40,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     filterChain.doFilter(request, response);
                     return;
                 }
+                String tokenType = claims.get("typ", String.class);
+                if (!"access".equals(tokenType)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 String userId = claims.getSubject();
                 Integer tokenVersion = claims.get("ver", Integer.class);
                 String versionInRedis = redisTemplate.opsForValue().get("auth:token:version:" + userId);

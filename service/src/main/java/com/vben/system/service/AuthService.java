@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 
@@ -32,9 +33,11 @@ public class AuthService {
             throw new RuntimeException("登录失败次数过多，请稍后再试");
         }
 
-        String captcha = redisTemplate.opsForValue().get("auth:captcha:" + request.getCaptchaKey());
-        if (captcha == null || !captcha.equalsIgnoreCase(request.getCaptchaCode())) {
-            throw new RuntimeException("验证码错误");
+        if (StringUtils.hasText(request.getCaptchaKey()) || StringUtils.hasText(request.getCaptchaCode())) {
+            String captcha = redisTemplate.opsForValue().get("auth:captcha:" + request.getCaptchaKey());
+            if (captcha == null || !captcha.equalsIgnoreCase(request.getCaptchaCode())) {
+                throw new RuntimeException("验证码错误");
+            }
         }
 
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.getUsername()));
@@ -57,10 +60,17 @@ public class AuthService {
     }
 
     public TokenResponse refresh(String refreshToken) {
+        if (!StringUtils.hasText(refreshToken)) {
+            throw new RuntimeException("refresh token 不能为空");
+        }
         if (!tokenService.existsRefreshToken(refreshToken)) {
             throw new RuntimeException("refresh token 已失效");
         }
         var claims = tokenService.parse(refreshToken);
+        String tokenType = claims.get("typ", String.class);
+        if (!"refresh".equals(tokenType)) {
+            throw new RuntimeException("token 类型错误");
+        }
         Long userId = Long.valueOf(claims.getSubject());
         int version = claims.get("ver", Integer.class);
         String accessToken = tokenService.createAccessToken(userId, version);
@@ -72,7 +82,9 @@ public class AuthService {
     public void logout(String accessToken, String refreshToken) {
         var claims = tokenService.parse(accessToken);
         redisTemplate.opsForValue().set("auth:blacklist:" + claims.getId(), "1", Duration.ofHours(1));
-        tokenService.removeRefreshToken(refreshToken);
+        if (StringUtils.hasText(refreshToken)) {
+            tokenService.removeRefreshToken(refreshToken);
+        }
     }
 
     public void forceOffline(Long userId) {

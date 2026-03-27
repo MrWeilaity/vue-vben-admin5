@@ -1,6 +1,5 @@
 package com.vben.system.dto.auth;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
@@ -9,6 +8,5 @@ import lombok.Data;
 @Data
 public class RefreshTokenRequest {
     /** 刷新令牌 */
-    @NotBlank
     private String refreshToken;
 }

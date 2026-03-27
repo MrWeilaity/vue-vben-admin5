@@ -34,11 +34,12 @@ export const useAuthStore = defineStore('auth', () => {
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      const { accessToken, refreshToken } = await loginApi(params);
 
       // 如果成功获取到 accessToken
       if (accessToken) {
         accessStore.setAccessToken(accessToken);
+        accessStore.setRefreshToken(refreshToken);
 
         // 获取用户信息并存储到 accessStore 中
         const [fetchUserInfoResult, accessCodes] = await Promise.all([
@@ -85,7 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggingOut.value = true; // 设置 标识
 
     try {
-      await logoutApi();
+      await logoutApi({ refreshToken: accessStore.refreshToken ?? undefined });
     } catch {
       // 不做任何处理
     } finally {
@@ -93,6 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       resetAllStores();
       accessStore.setLoginExpired(false);
+      accessStore.setRefreshToken(null);
     }
 
     // 回登录页带上当前路由地址
