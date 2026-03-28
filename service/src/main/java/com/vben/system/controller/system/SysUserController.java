@@ -103,8 +103,7 @@ public class SysUserController {
         user.setStatus(request.getStatus());
         user.setDataScope(request.getDataScope());
         user.setRemark(request.getRemark());
-        List<Long> roleIds = request.getRoleIds() == null ? List.of() : request.getRoleIds();
-        userService.update(id, user, roleIds);
+        userService.update(id, user, request.getRoleIds());
         return ApiResponse.ok(null);
     }
 

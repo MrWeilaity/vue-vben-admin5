@@ -65,7 +65,9 @@ public class SysUserService {
     public void update(Long id, SysUser user, List<Long> roleIds) {
         user.setId(id);
         userMapper.updateById(user);
-        saveUserRoles(id, roleIds);
+        if (roleIds != null) {
+            saveUserRoles(id, roleIds);
+        }
     }
 
     /**

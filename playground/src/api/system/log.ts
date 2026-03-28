@@ -10,6 +10,7 @@ export namespace SystemLogApi {
     method?: string;
     operation?: string;
     path?: string;
+    rowKey?: string;
     result?: string;
     time?: string;
     username?: string;

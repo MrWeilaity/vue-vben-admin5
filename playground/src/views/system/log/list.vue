@@ -21,14 +21,18 @@ const [Grid] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async (_, formValues) => {
-          return await getOperationLogList({
+          const rows = await getOperationLogList({
             limit: 200,
             ...formValues,
           });
+          return rows.map((item, index) => ({
+            ...item,
+            rowKey: `${item.time ?? ''}-${item.username ?? ''}-${item.path ?? ''}-${index}`,
+          }));
         },
       },
     },
-    rowConfig: { keyField: 'time' },
+    rowConfig: { keyField: 'rowKey' },
     toolbarConfig: {
       custom: true,
       export: false,
