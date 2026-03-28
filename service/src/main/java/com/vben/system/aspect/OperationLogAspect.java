@@ -40,7 +40,9 @@ public class OperationLogAspect {
         } finally {
             long duration = System.currentTimeMillis() - begin;
             OperationLogRecord record = buildRecord(joinPoint, duration, result, error);
-            operationLogService.save(record);
+            if (!isAuditQuery(record.getPath())) {
+                operationLogService.save(record);
+            }
             log.info("op={} result={} duration={}ms", joinPoint.getSignature().toShortString(), result, duration);
         }
     }
@@ -74,5 +76,9 @@ public class OperationLogAspect {
             .durationMs(duration)
             .time(LocalDateTime.now())
             .build();
+    }
+
+    private boolean isAuditQuery(String path) {
+        return "/api/system/log/operation/list".equals(path);
     }
 }

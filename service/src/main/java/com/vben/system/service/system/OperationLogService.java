@@ -34,7 +34,7 @@ public class OperationLogService {
 
     public List<OperationLogRecord> list(String keyword, int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 500));
-        List<String> rows = redisTemplate.opsForList().range(OP_LOG_KEY, 0, safeLimit - 1);
+        List<String> rows = redisTemplate.opsForList().range(OP_LOG_KEY, 0, OP_LOG_MAX_SIZE - 1);
         if (rows == null || rows.isEmpty()) {
             return List.of();
         }
@@ -46,6 +46,9 @@ public class OperationLogService {
                 OperationLogRecord log = objectMapper.readValue(row, OperationLogRecord.class);
                 if (kw == null || containsKeyword(log, kw)) {
                     data.add(log);
+                    if (data.size() >= safeLimit) {
+                        break;
+                    }
                 }
             } catch (Exception ignored) {
             }
