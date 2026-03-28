@@ -64,7 +64,10 @@ public class SysUserService {
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, SysUser user, List<Long> roleIds) {
         user.setId(id);
-        userMapper.updateById(user);
+        int updatedRows = userMapper.updateById(user);
+        if (updatedRows <= 0) {
+            return;
+        }
         if (roleIds != null) {
             saveUserRoles(id, roleIds);
         }
