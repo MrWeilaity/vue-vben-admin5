@@ -2,6 +2,8 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridColumns } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
+import { getDeptList } from '#/api/system/dept';
+import { getRoleList } from '#/api/system/role';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -17,6 +19,34 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'nickname',
       label: $t('system.user.nickname'),
       rules: 'required',
+    },
+    {
+      component: 'ApiTreeSelect',
+      fieldName: 'deptId',
+      label: $t('system.dept.name'),
+      rules: 'required',
+      componentProps: {
+        allowClear: true,
+        api: getDeptList,
+        class: 'w-full',
+        labelField: 'name',
+        valueField: 'id',
+        childrenField: 'children',
+      },
+    },
+    {
+      component: 'ApiSelect',
+      fieldName: 'roleIds',
+      label: $t('system.role.name'),
+      componentProps: {
+        api: getRoleList,
+        mode: 'multiple',
+        afterFetch: (data: Array<{ id: string; name: string }>) =>
+          data.map((item) => ({
+            label: item.name,
+            value: item.id,
+          })),
+      },
     },
     { component: 'Input', fieldName: 'email', label: $t('system.user.email') },
     {
@@ -36,6 +66,14 @@ export function useFormSchema(): VbenFormSchema[] {
           { label: $t('common.enabled'), value: 1 },
           { label: $t('common.disabled'), value: 0 },
         ],
+      },
+    },
+    {
+      component: 'InputPassword',
+      fieldName: 'password',
+      label: $t('authentication.password'),
+      dependencies: {
+        show: (values) => !values.id,
       },
     },
     {

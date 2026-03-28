@@ -64,10 +64,13 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
    */
   async function doRefreshToken() {
     const accessStore = useAccessStore();
-    const resp = await refreshTokenApi();
-    const newToken = resp.data;
-    accessStore.setAccessToken(newToken);
-    return newToken;
+    const resp = await refreshTokenApi({
+      refreshToken: accessStore.refreshToken ?? undefined,
+    });
+    const refreshData = (resp as any)?.data ?? resp;
+    accessStore.setAccessToken(refreshData.accessToken);
+    accessStore.setRefreshToken(refreshData.refreshToken);
+    return refreshData.accessToken;
   }
 
   function formatToken(token: null | string) {

@@ -34,8 +34,12 @@ public class SysUserController {
      */
     @Operation(summary = "查询用户列表")
     @GetMapping("/list")
-    public ApiResponse<List<UserResponse>> list() {
-        List<UserResponse> data = userService.list()
+    public ApiResponse<List<UserResponse>> list(
+        @RequestParam(required = false) String username,
+        @RequestParam(required = false) String nickname,
+        @RequestParam(required = false) Integer status
+    ) {
+        List<UserResponse> data = userService.list(username, nickname, status)
             .stream()
             .map(user -> UserResponse.builder()
                 .id(String.valueOf(user.getId()))

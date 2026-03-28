@@ -16,7 +16,7 @@ export namespace SystemRoleApi {
 /**
  * 获取角色列表数据
  */
-async function getRoleList(params: Recordable<any>) {
+async function getRoleList(params: Recordable<any> = {}) {
   return requestClient.get<Array<SystemRoleApi.SystemRole>>(
     '/system/role/list',
     { params },

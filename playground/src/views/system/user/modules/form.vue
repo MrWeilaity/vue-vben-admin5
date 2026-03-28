@@ -27,7 +27,16 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (!valid) return;
     const values = await formApi.getValues();
     drawerApi.lock();
-    (id.value ? updateUser(id.value, values as any) : createUser(values as any))
+    const payload = {
+      roleIds: [],
+      ...values,
+    } as any;
+    const { password, ...updatePayload } = payload;
+    const request = id.value
+      ? updateUser(id.value, updatePayload)
+      : createUser({ ...payload, password: password || '123456' });
+
+    request
       .then(() => {
         emits('success');
         drawerApi.close();

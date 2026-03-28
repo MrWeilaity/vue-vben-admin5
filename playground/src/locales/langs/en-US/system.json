@@ -74,5 +74,18 @@
     "remark": "Remark",
     "createTime": "Create Time",
     "operation": "Operation"
+  },
+  "log": {
+    "title": "Operation Log",
+    "list": "Operation Log List",
+    "keyword": "Keyword",
+    "username": "Operator",
+    "method": "Method",
+    "path": "Path",
+    "result": "Result",
+    "duration": "Duration(ms)",
+    "operation": "Operation",
+    "error": "Error",
+    "time": "Time"
   }
 }

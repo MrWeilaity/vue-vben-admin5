@@ -6,6 +6,7 @@ import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -24,8 +25,14 @@ public class SysUserService {
      *
      * @return 用户列表
      */
-    public List<SysUser> list() {
-        return userMapper.selectList(new LambdaQueryWrapper<SysUser>().orderByDesc(SysUser::getId));
+    public List<SysUser> list(String username, String nickname, Integer status) {
+        return userMapper.selectList(
+            new LambdaQueryWrapper<SysUser>()
+                .like(StringUtils.hasText(username), SysUser::getUsername, username)
+                .like(StringUtils.hasText(nickname), SysUser::getNickname, nickname)
+                .eq(status != null, SysUser::getStatus, status)
+                .orderByDesc(SysUser::getId)
+        );
     }
 
     /**
