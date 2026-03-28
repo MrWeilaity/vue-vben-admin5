@@ -67,7 +67,8 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     const resp = await refreshTokenApi({
       refreshToken: accessStore.refreshToken ?? undefined,
     });
-    const refreshData = (resp as any)?.data ?? resp;
+    const refreshData =
+      (resp as any)?.data?.data ?? (resp as any)?.data ?? resp;
     accessStore.setAccessToken(refreshData.accessToken);
     accessStore.setRefreshToken(refreshData.refreshToken);
     return refreshData.accessToken;

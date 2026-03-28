@@ -39,7 +39,10 @@ public class SysUserController {
         @RequestParam(required = false) String nickname,
         @RequestParam(required = false) Integer status
     ) {
-        List<UserResponse> data = userService.list(username, nickname, status)
+        List<SysUser> users = userService.list(username, nickname, status);
+        List<Long> userIds = users.stream().map(SysUser::getId).toList();
+        var roleMap = userService.getRoleIdsByUserIds(userIds);
+        List<UserResponse> data = users
             .stream()
             .map(user -> UserResponse.builder()
                 .id(String.valueOf(user.getId()))
@@ -51,7 +54,7 @@ public class SysUserController {
                 .status(user.getStatus())
                 .dataScope(user.getDataScope())
                 .remark(user.getRemark())
-                .roleIds(List.of())
+                .roleIds(roleMap.getOrDefault(user.getId(), List.of()).stream().map(String::valueOf).toList())
                 .createTime(user.getCreateTime())
                 .build())
             .toList();
@@ -77,7 +80,8 @@ public class SysUserController {
         user.setStatus(request.getStatus());
         user.setDataScope(request.getDataScope());
         user.setRemark(request.getRemark());
-        userService.create(user);
+        List<Long> roleIds = request.getRoleIds() == null ? List.of() : request.getRoleIds();
+        userService.create(user, roleIds);
         return ApiResponse.ok(null);
     }
 
@@ -99,7 +103,8 @@ public class SysUserController {
         user.setStatus(request.getStatus());
         user.setDataScope(request.getDataScope());
         user.setRemark(request.getRemark());
-        userService.update(id, user);
+        List<Long> roleIds = request.getRoleIds() == null ? List.of() : request.getRoleIds();
+        userService.update(id, user, roleIds);
         return ApiResponse.ok(null);
     }
 

@@ -34,7 +34,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const { password, ...updatePayload } = payload;
     const request = id.value
       ? updateUser(id.value, updatePayload)
-      : createUser({ ...payload, password: password || '123456' });
+      : createUser({ ...payload, password });
 
     request
       .then(() => {
