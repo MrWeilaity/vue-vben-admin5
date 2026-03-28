@@ -62,7 +62,8 @@ public class OperationLogService {
             || contains(log.getMethod(), keyword)
             || contains(log.getOperation(), keyword)
             || contains(log.getIp(), keyword)
-            || contains(log.getResult(), keyword);
+            || contains(log.getResult(), keyword)
+            || contains(log.getError(), keyword);
     }
 
     private boolean contains(String text, String keyword) {
