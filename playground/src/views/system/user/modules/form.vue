@@ -28,8 +28,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const values = await formApi.getValues();
     drawerApi.lock();
     const payload = {
-      roleIds: [],
       ...values,
+      roleIds: values.roleIds ?? [],
     } as any;
     const { password, ...updatePayload } = payload;
     const request = id.value
