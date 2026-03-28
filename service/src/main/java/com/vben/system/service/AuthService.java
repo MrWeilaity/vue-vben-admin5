@@ -53,8 +53,8 @@ public class AuthService {
             redisTemplate.opsForValue().set(versionKey, "1");
         }
         int version = Integer.parseInt(redisTemplate.opsForValue().get(versionKey));
-        String accessToken = tokenService.createAccessToken(user.getId(), version);
-        String refreshToken = tokenService.createRefreshToken(user.getId(), version);
+        String accessToken = tokenService.createAccessToken(user.getId(), version, user.getUsername());
+        String refreshToken = tokenService.createRefreshToken(user.getId(), version, user.getUsername());
         redisTemplate.opsForHash().put("auth:session:" + user.getId(), "loginIp", ip);
         return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
     }
@@ -74,8 +74,13 @@ public class AuthService {
         }
         Long userId = Long.valueOf(claims.getSubject());
         int version = claims.get("ver", Integer.class);
-        String accessToken = tokenService.createAccessToken(userId, version);
-        String newRefreshToken = tokenService.createRefreshToken(userId, version);
+        String username = claims.get("uname", String.class);
+        if (!StringUtils.hasText(username)) {
+            SysUser user = userMapper.selectById(userId);
+            username = user == null ? String.valueOf(userId) : user.getUsername();
+        }
+        String accessToken = tokenService.createAccessToken(userId, version, username);
+        String newRefreshToken = tokenService.createRefreshToken(userId, version, username);
         tokenService.removeRefreshToken(refreshToken);
         return TokenResponse.builder().accessToken(accessToken).refreshToken(newRefreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
     }

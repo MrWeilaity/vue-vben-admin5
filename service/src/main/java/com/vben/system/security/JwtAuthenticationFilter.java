@@ -48,6 +48,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 String userId = claims.getSubject();
+                String username = claims.get("uname", String.class);
+                if (!StringUtils.hasText(username)) {
+                    username = userId;
+                }
                 Integer tokenVersion = claims.get("ver", Integer.class);
                 String versionInRedis = redisTemplate.opsForValue().get("auth:token:version:" + userId);
                 if (versionInRedis != null && tokenVersion != Integer.parseInt(versionInRedis)) {
@@ -55,7 +59,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                User principal = new User(userId, "", List.of());
+                User principal = new User(username, "", List.of());
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);

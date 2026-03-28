@@ -6,6 +6,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -39,10 +40,14 @@ public class JwtTokenService {
     }
 
     public String createAccessToken(Long userId, int version) {
+        return createAccessToken(userId, version, null);
+    }
+
+    public String createAccessToken(Long userId, int version, String username) {
         String jti = UUID.randomUUID().toString();
         Date now = new Date();
         Date exp = new Date(now.getTime() + accessExpireSeconds * 1000);
-        return Jwts.builder()
+        var builder = Jwts.builder()
             .issuer(issuer)
             .subject(String.valueOf(userId))
             .id(jti)
@@ -50,15 +55,22 @@ public class JwtTokenService {
             .claim("typ", "access")
             .issuedAt(now)
             .expiration(exp)
-            .signWith(key)
-            .compact();
+            .signWith(key);
+        if (StringUtils.hasText(username)) {
+            builder.claim("uname", username);
+        }
+        return builder.compact();
     }
 
     public String createRefreshToken(Long userId, int version) {
+        return createRefreshToken(userId, version, null);
+    }
+
+    public String createRefreshToken(Long userId, int version, String username) {
         String jti = UUID.randomUUID().toString();
         Date now = new Date();
         Date exp = new Date(now.getTime() + refreshExpireSeconds * 1000);
-        String token = Jwts.builder()
+        var builder = Jwts.builder()
             .issuer(issuer)
             .subject(String.valueOf(userId))
             .id(jti)
@@ -66,8 +78,11 @@ public class JwtTokenService {
             .claim("typ", "refresh")
             .issuedAt(now)
             .expiration(exp)
-            .signWith(key)
-            .compact();
+            .signWith(key);
+        if (StringUtils.hasText(username)) {
+            builder.claim("uname", username);
+        }
+        String token = builder.compact();
         redisTemplate.opsForValue().set("auth:refresh:" + token, String.valueOf(userId), Duration.ofSeconds(refreshExpireSeconds));
         return token;
     }

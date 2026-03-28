@@ -2,12 +2,21 @@ package com.vben.system.service.system;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.vben.system.entity.SysUser;
+import com.vben.system.entity.SysUserRole;
 import com.vben.system.mapper.SysUserMapper;
+import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 用户业务服务，封装用户增删改查与下线控制。
@@ -17,6 +26,7 @@ import java.util.List;
 public class SysUserService {
 
     private final SysUserMapper userMapper;
+    private final SysUserRoleMapper userRoleMapper;
     private final AuthService authService;
 
     /**
@@ -24,8 +34,14 @@ public class SysUserService {
      *
      * @return 用户列表
      */
-    public List<SysUser> list() {
-        return userMapper.selectList(new LambdaQueryWrapper<SysUser>().orderByDesc(SysUser::getId));
+    public List<SysUser> list(String username, String nickname, Integer status) {
+        return userMapper.selectList(
+            new LambdaQueryWrapper<SysUser>()
+                .like(StringUtils.hasText(username), SysUser::getUsername, username)
+                .like(StringUtils.hasText(nickname), SysUser::getNickname, nickname)
+                .eq(status != null, SysUser::getStatus, status)
+                .orderByDesc(SysUser::getId)
+        );
     }
 
     /**
@@ -33,8 +49,10 @@ public class SysUserService {
      *
      * @param user 用户实体
      */
-    public void create(SysUser user) {
+    @Transactional(rollbackFor = Exception.class)
+    public void create(SysUser user, List<Long> roleIds) {
         userMapper.insert(user);
+        saveUserRoles(user.getId(), roleIds);
     }
 
     /**
@@ -43,9 +61,16 @@ public class SysUserService {
      * @param id   用户 ID
      * @param user 用户实体
      */
-    public void update(Long id, SysUser user) {
+    @Transactional(rollbackFor = Exception.class)
+    public void update(Long id, SysUser user, List<Long> roleIds) {
         user.setId(id);
-        userMapper.updateById(user);
+        int updatedRows = userMapper.updateById(user);
+        if (updatedRows <= 0) {
+            return;
+        }
+        if (roleIds != null) {
+            saveUserRoles(id, roleIds);
+        }
     }
 
     /**
@@ -55,6 +80,7 @@ public class SysUserService {
      */
     public void delete(Long id) {
         userMapper.deleteById(id);
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
         authService.forceOffline(id);
     }
 
@@ -65,5 +91,33 @@ public class SysUserService {
      */
     public void forceOffline(Long id) {
         authService.forceOffline(id);
+    }
+
+    public Map<Long, List<Long>> getRoleIdsByUserIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>().in(SysUserRole::getUserId, userIds))
+            .stream()
+            .collect(Collectors.groupingBy(SysUserRole::getUserId, Collectors.mapping(SysUserRole::getRoleId, Collectors.toList())));
+    }
+
+    private void saveUserRoles(Long userId, List<Long> roleIds) {
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
+        if (roleIds == null || roleIds.isEmpty()) {
+            return;
+        }
+        Set<Long> distinctRoleIds = new LinkedHashSet<>(roleIds);
+        List<SysUserRole> relations = new ArrayList<>();
+        for (Long roleId : distinctRoleIds) {
+            if (roleId == null) {
+                continue;
+            }
+            SysUserRole relation = new SysUserRole();
+            relation.setUserId(userId);
+            relation.setRoleId(roleId);
+            relations.add(relation);
+        }
+        relations.forEach(userRoleMapper::insert);
     }
 }
