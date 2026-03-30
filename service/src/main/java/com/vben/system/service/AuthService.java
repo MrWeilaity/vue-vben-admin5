@@ -4,6 +4,8 @@ import cn.hutool.captcha.CaptchaUtil;
 import cn.hutool.captcha.LineCaptcha;
 import cn.hutool.captcha.generator.RandomGenerator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.vben.system.common.exception.BadRequestException;
+import com.vben.system.common.exception.ForbiddenException;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.TokenResponse;
 import com.vben.system.entity.SysMenu;
@@ -54,13 +56,13 @@ public class AuthService {
             String failKey = "auth:fail:" + request.getUsername();
             String failedCount = redisTemplate.opsForValue().get(failKey);
             if (failedCount != null && Integer.parseInt(failedCount) >= 5) {
-                throw new RuntimeException("登录失败次数过多，请稍后再试");
+                throw new ForbiddenException("登录失败次数过多，请稍后再试");
             }
 
             if (StringUtils.hasText(request.getCaptchaKey()) || StringUtils.hasText(request.getCaptchaCode())) {
                 String captcha = redisTemplate.opsForValue().get("auth:captcha:" + request.getCaptchaKey());
                 if (captcha == null || !captcha.equalsIgnoreCase(request.getCaptchaCode())) {
-                    throw new RuntimeException("验证码错误");
+                    throw new BadRequestException("验证码错误");
                 }
             }
 
@@ -68,7 +70,7 @@ public class AuthService {
             if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 redisTemplate.opsForValue().increment(failKey);
                 redisTemplate.expire(failKey, Duration.ofMinutes(15));
-                throw new RuntimeException("账号或密码错误");
+                throw new ForbiddenException("账号或密码错误");
             }
 
             redisTemplate.delete(failKey);
@@ -90,16 +92,16 @@ public class AuthService {
 
     public TokenResponse refresh(String refreshToken) {
         if (!StringUtils.hasText(refreshToken)) {
-            throw new RuntimeException("refresh token 不能为空");
+            throw new BadRequestException("refresh token 不能为空");
         }
         if (!tokenService.existsRefreshToken(refreshToken)) {
-            throw new RuntimeException("refresh token 已失效");
+            throw new ForbiddenException("refresh token 已失效");
         }
         var claims = tokenService.parse(refreshToken);
         String tokenType = claims.get("typ", String.class);
         // 兼容历史 refresh token：旧 token 不带 typ，允许在过渡期继续使用
         if (StringUtils.hasText(tokenType) && !"refresh".equals(tokenType)) {
-            throw new RuntimeException("token 类型错误");
+            throw new BadRequestException("token 类型错误");
         }
         Long userId = Long.valueOf(claims.getSubject());
         int version = claims.get("ver", Integer.class);

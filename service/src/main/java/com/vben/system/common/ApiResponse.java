@@ -18,4 +18,12 @@ public class ApiResponse<T> {
         resp.setData(data);
         return resp;
     }
+
+    public static <T> ApiResponse<T> fail(int code, String message) {
+        ApiResponse<T> resp = new ApiResponse<>();
+        resp.setCode(code);
+        resp.setMessage(message);
+        resp.setData(null);
+        return resp;
+    }
 }
