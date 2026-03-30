@@ -8,6 +8,7 @@ import com.vben.system.entity.SysMenu;
 import com.vben.system.service.system.SysMenuService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vben.system.common.exception.ServiceException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -133,7 +134,7 @@ public class SysMenuController {
         try {
             return objectMapper.writeValueAsString(meta);
         } catch (Exception ex) {
-            throw new IllegalArgumentException("菜单 meta 字段不是合法 JSON", ex);
+            throw new ServiceException("菜单 meta 字段不是合法 JSON");
         }
     }
 }
