@@ -14,11 +14,39 @@
  * 替代 SliderCaptcha（滑块验证）
  */
 
-import { computed, onMounted, reactive, watch } from 'vue';
+import { computed, onMounted, reactive, useAttrs, watch } from 'vue';
 
 import { $t } from '@vben/locales';
 
+import { Input } from '@vben-core/shadcn-ui';
 import { cn } from '@vben-core/shared/utils';
+
+defineOptions({
+  inheritAttrs: false,
+});
+
+/**
+ * 默认值
+ */
+const props = withDefaults(defineProps<ImageCaptchaProps>(), {
+  class: '',
+  placeholder: '',
+  disabled: false,
+  inputClass: '',
+  imageClass: '',
+  wrapperClass: '',
+});
+
+/**
+ * ============================
+ * 组件事件
+ * ============================
+ */
+const emit = defineEmits<{
+  change: [ImageCaptchaValue]; // 输入变化
+  loadError: [unknown]; // 加载失败
+  loadSuccess: [ImageCaptchaResponse]; // 加载成功
+}>();
 
 /**
  * ============================
@@ -46,7 +74,7 @@ export interface ImageCaptchaValue {
 export interface ImageCaptchaResponse {
   captchaImageBase64: string; // base64 图片
   captchaKey: string; // 唯一 key
-  expireSeconds?: number; // 过期时间（可选）
+  expireSeconds: number; // 过期时间（可选）
 }
 
 /**
@@ -67,28 +95,7 @@ interface ImageCaptchaProps {
   disabled?: boolean;
 }
 
-/**
- * 默认值
- */
-const props = withDefaults(defineProps<ImageCaptchaProps>(), {
-  class: '',
-  placeholder: '',
-  disabled: false,
-  inputClass: '',
-  imageClass: '',
-  wrapperClass: '',
-});
-
-/**
- * ============================
- * 组件事件
- * ============================
- */
-const emit = defineEmits<{
-  change: [ImageCaptchaValue]; // 输入变化
-  loadError: [unknown]; // 加载失败
-  loadSuccess: [ImageCaptchaResponse]; // 加载成功
-}>();
+const attrs = useAttrs();
 
 /**
  * ============================
@@ -166,7 +173,6 @@ async function loadCaptcha() {
     };
 
     emit('loadSuccess', res);
-    emit('change', modelValue.value);
   } catch (error) {
     /**
      * 加载失败处理
@@ -183,19 +189,14 @@ async function loadCaptcha() {
   }
 }
 
-/**
- * ============================
- * 输入处理
- * ============================
- */
-function handleInput(event: Event) {
-  const target = event.target as HTMLInputElement;
-
+function handleInput(value: number | string) {
   modelValue.value = {
-    captchaCode: target.value,
+    captchaCode: String(value ?? ''),
     captchaKey: modelValue.value?.captchaKey ?? '',
   };
+}
 
+function handleBlur() {
   emit('change', modelValue.value);
 }
 
@@ -242,20 +243,17 @@ onMounted(() => {
   <!-- 外层容器 -->
   <div :class="cn('flex w-full items-center gap-2', wrapperClass, props.class)">
     <!-- 输入框 -->
-    <input
-      :value="modelValue?.captchaCode ?? ''"
+    <Input
+      v-bind="attrs"
+      :model-value="modelValue?.captchaCode ?? ''"
       :disabled="disabled"
       :placeholder="
         placeholder || $t('authentication.captchaPlaceholder') || '请输入验证码'
       "
-      :class="
-        cn(
-          'h-10 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60',
-          inputClass,
-        )
-      "
+      :class="cn('min-w-0 flex-1', inputClass)"
       autocomplete="off"
-      @input="handleInput"
+      @update:model-value="handleInput"
+      @blur="handleBlur"
     />
 
     <!-- 验证码图片区域 -->

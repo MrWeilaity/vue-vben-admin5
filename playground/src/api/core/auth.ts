@@ -3,8 +3,22 @@ import { baseRequestClient, requestClient } from '#/api/request';
 export namespace AuthApi {
   /** 登录接口参数 */
   export interface LoginParams {
-    password?: string;
-    username?: string;
+    /**
+     * @zh_CN 验证码 code
+     */
+    captchaCode: string;
+    /**
+     * @zh_CN 验证码 key
+     */
+    captchaKey: string;
+    /**
+     * @zh_CN 密码
+     */
+    password: string;
+    /**
+     * @zh_CN 用户名
+     */
+    username: string;
   }
 
   /** 登录接口返回值 */
