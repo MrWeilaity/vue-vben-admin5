@@ -3,8 +3,14 @@ package com.vben.system.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.TokenResponse;
+import com.vben.system.entity.SysMenu;
+import com.vben.system.entity.SysRoleMenu;
 import com.vben.system.entity.SysUser;
+import com.vben.system.entity.SysUserRole;
+import com.vben.system.mapper.SysMenuMapper;
+import com.vben.system.mapper.SysRoleMenuMapper;
 import com.vben.system.mapper.SysUserMapper;
+import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.security.JwtTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -13,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * AuthService 组件说明。
@@ -22,6 +29,9 @@ import java.time.Duration;
 public class AuthService {
 
     private final SysUserMapper userMapper;
+    private final SysUserRoleMapper userRoleMapper;
+    private final SysRoleMenuMapper roleMenuMapper;
+    private final SysMenuMapper menuMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService tokenService;
     private final StringRedisTemplate redisTemplate;
@@ -98,5 +108,38 @@ public class AuthService {
         String currentVersion = redisTemplate.opsForValue().get(versionKey);
         int version = Integer.parseInt(currentVersion == null ? "1" : currentVersion);
         redisTemplate.opsForValue().set(versionKey, String.valueOf(version + 1));
+    }
+
+    public List<String> getAccessCodes(String username) {
+        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username));
+        if (user == null) {
+            return List.of();
+        }
+        List<Long> roleIds = userRoleMapper.selectList(
+            new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, user.getId())
+        ).stream().map(SysUserRole::getRoleId).distinct().toList();
+        if (roleIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> menuIds = roleMenuMapper.selectList(
+            new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds)
+        ).stream().map(SysRoleMenu::getMenuId).distinct().toList();
+        if (menuIds.isEmpty()) {
+            return List.of();
+        }
+        return menuMapper.selectBatchIds(menuIds).stream()
+            .filter(menu -> menu.getStatus() != null && menu.getStatus() == 1)
+            .map(SysMenu::getAuthCode)
+            .filter(StringUtils::hasText)
+            .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new))
+            .stream()
+            .sorted()
+            .toList();
+    }
+
+    public String generateCaptcha(String captchaKey, Duration ttl) {
+        String code = String.valueOf((int) ((Math.random() * 9 + 1) * 1000));
+        redisTemplate.opsForValue().set("auth:captcha:" + captchaKey, code, ttl);
+        return code;
     }
 }

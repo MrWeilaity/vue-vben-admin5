@@ -1,6 +1,7 @@
 package com.vben.system.controller;
 
 import com.vben.system.common.ApiResponse;
+import com.vben.system.dto.auth.CaptchaResponse;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.RefreshTokenRequest;
 import com.vben.system.dto.auth.TokenResponse;
@@ -13,7 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 认证控制器。
@@ -54,5 +57,27 @@ public class AuthController {
         String refreshToken = payload == null ? null : payload.get("refreshToken");
         authService.logout(authorization.replace("Bearer ", ""), refreshToken);
         return ApiResponse.ok(null);
+    }
+
+    @Operation(summary = "获取当前用户权限码", description = "根据当前登录用户返回权限码数组")
+    @GetMapping("/codes")
+    public ApiResponse<java.util.List<String>> codes(java.security.Principal principal) {
+        if (principal == null || !StringUtils.hasText(principal.getName())) {
+            return ApiResponse.ok(java.util.List.of());
+        }
+        return ApiResponse.ok(authService.getAccessCodes(principal.getName()));
+    }
+
+    @Operation(summary = "获取登录验证码", description = "生成4位数字验证码并写入 Redis")
+    @GetMapping("/captcha")
+    public ApiResponse<CaptchaResponse> captcha() {
+        String captchaKey = UUID.randomUUID().toString().replace("-", "");
+        int expireSeconds = 120;
+        String captchaCode = authService.generateCaptcha(captchaKey, Duration.ofSeconds(expireSeconds));
+        return ApiResponse.ok(CaptchaResponse.builder()
+            .captchaKey(captchaKey)
+            .captchaCode(captchaCode)
+            .expireSeconds(expireSeconds)
+            .build());
     }
 }
