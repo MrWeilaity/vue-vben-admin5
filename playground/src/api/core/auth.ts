@@ -21,6 +21,17 @@ export namespace AuthApi {
     accessToken: string;
     refreshToken: string;
   }
+  /**
+   * 验证码接口返回值
+   */
+  export interface CaptchaResponse{
+    /** 验证码 key */
+    captchaImage: string;
+    /** 验证码图片 Base64 数据 */
+    captchaKey: string;
+    /** 过期时间（秒） */
+    expireSeconds: number;
+  }
 }
 
 /**
@@ -59,4 +70,11 @@ export async function logoutApi(data?: AuthApi.RefreshTokenParams) {
  */
 export async function getAccessCodesApi() {
   return requestClient.get<string[]>('/auth/codes');
+}
+
+/**
+ * 获取图片验证码
+ */
+export function getCaptchaApi() {
+  return requestClient.get<AuthApi.CaptchaResponse>('/auth/captcha');
 }
