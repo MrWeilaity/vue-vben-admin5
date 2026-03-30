@@ -35,7 +35,7 @@ import { cn } from '@vben-core/shared/utils';
  */
 export interface ImageCaptchaValue {
   captchaCode: string; // 用户输入的验证码
-  captchaKey: string;  // 后端返回的唯一标识（用于校验）
+  captchaKey: string; // 后端返回的唯一标识（用于校验）
 }
 
 /**
@@ -45,8 +45,8 @@ export interface ImageCaptchaValue {
  */
 export interface ImageCaptchaResponse {
   captchaImageBase64: string; // base64 图片
-  captchaKey: string;         // 唯一 key
-  expireSeconds?: number;     // 过期时间（可选）
+  captchaKey: string; // 唯一 key
+  expireSeconds?: number; // 过期时间（可选）
 }
 
 /**
@@ -85,8 +85,8 @@ const props = withDefaults(defineProps<ImageCaptchaProps>(), {
  * ============================
  */
 const emit = defineEmits<{
-  change: [ImageCaptchaValue];         // 输入变化
-  loadError: [unknown];                // 加载失败
+  change: [ImageCaptchaValue]; // 输入变化
+  loadError: [unknown]; // 加载失败
   loadSuccess: [ImageCaptchaResponse]; // 加载成功
 }>();
 
@@ -112,9 +112,9 @@ const modelValue = defineModel<ImageCaptchaValue>({
  * ============================
  */
 const state = reactive({
-  loading: false,              // 是否正在加载验证码
-  captchaImageBase64: '',      // 图片 base64
-  expireSeconds: 0,            // 过期时间
+  loading: false, // 是否正在加载验证码
+  captchaImageBase64: '', // 图片 base64
+  expireSeconds: 0, // 过期时间
 });
 
 /**
@@ -241,7 +241,7 @@ onMounted(() => {
 <template>
   <!-- 外层容器 -->
   <div :class="cn('flex w-full items-center gap-2', wrapperClass, props.class)">
-<!-- 输入框 -->
+    <!-- 输入框 -->
     <input
       :value="modelValue?.captchaCode ?? ''"
       :disabled="disabled"

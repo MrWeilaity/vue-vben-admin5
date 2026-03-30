@@ -24,7 +24,7 @@ export namespace AuthApi {
   /**
    * 验证码接口返回值
    */
-  export interface CaptchaResponse{
+  export interface CaptchaResponse {
     /** 验证码 key */
     captchaImage: string;
     /** 验证码图片 Base64 数据 */
