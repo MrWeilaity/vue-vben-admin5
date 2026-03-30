@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
     private final ObjectMapper objectMapper;
 
@@ -24,6 +26,13 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         HttpServletResponse response,
         AccessDeniedException accessDeniedException
     ) throws IOException, ServletException {
+        log.error(
+            "鉴权拒绝: uri={}, method={}, message={}",
+            request.getRequestURI(),
+            request.getMethod(),
+            accessDeniedException.getMessage(),
+            accessDeniedException
+        );
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType("application/json;charset=UTF-8");
