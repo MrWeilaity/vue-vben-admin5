@@ -1,5 +1,8 @@
 package com.vben.system.service;
 
+import cn.hutool.captcha.CaptchaUtil;
+import cn.hutool.captcha.LineCaptcha;
+import cn.hutool.captcha.generator.RandomGenerator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.TokenResponse;
@@ -27,6 +30,12 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+    private static final String CAPTCHA_CHAR_POOL = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final int CAPTCHA_LENGTH = 4;
+    private static final int CAPTCHA_WIDTH = 130;
+    private static final int CAPTCHA_HEIGHT = 48;
+    private static final int CAPTCHA_INTERFERE_COUNT = 20;
+
 
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
@@ -37,36 +46,46 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
 
     public TokenResponse login(LoginRequest request, String ip) {
-        String failKey = "auth:fail:" + request.getUsername();
-        String failedCount = redisTemplate.opsForValue().get(failKey);
-        if (failedCount != null && Integer.parseInt(failedCount) >= 5) {
-            throw new RuntimeException("登录失败次数过多，请稍后再试");
+        String captchaRedisKey = null;
+        if (StringUtils.hasText(request.getCaptchaKey())) {
+            captchaRedisKey = "auth:captcha:" + request.getCaptchaKey();
         }
+        try {
+            String failKey = "auth:fail:" + request.getUsername();
+            String failedCount = redisTemplate.opsForValue().get(failKey);
+            if (failedCount != null && Integer.parseInt(failedCount) >= 5) {
+                throw new RuntimeException("登录失败次数过多，请稍后再试");
+            }
 
-        if (StringUtils.hasText(request.getCaptchaKey()) || StringUtils.hasText(request.getCaptchaCode())) {
-            String captcha = redisTemplate.opsForValue().get("auth:captcha:" + request.getCaptchaKey());
-            if (captcha == null || !captcha.equalsIgnoreCase(request.getCaptchaCode())) {
-                throw new RuntimeException("验证码错误");
+            if (StringUtils.hasText(request.getCaptchaKey()) || StringUtils.hasText(request.getCaptchaCode())) {
+                String captcha = redisTemplate.opsForValue().get("auth:captcha:" + request.getCaptchaKey());
+                if (captcha == null || !captcha.equalsIgnoreCase(request.getCaptchaCode())) {
+                    throw new RuntimeException("验证码错误");
+                }
+            }
+
+            SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.getUsername()));
+            if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                redisTemplate.opsForValue().increment(failKey);
+                redisTemplate.expire(failKey, Duration.ofMinutes(15));
+                throw new RuntimeException("账号或密码错误");
+            }
+
+            redisTemplate.delete(failKey);
+            String versionKey = "auth:token:version:" + user.getId();
+            if (Boolean.FALSE.equals(redisTemplate.hasKey(versionKey))) {
+                redisTemplate.opsForValue().set(versionKey, "1");
+            }
+            int version = Integer.parseInt(redisTemplate.opsForValue().get(versionKey));
+            String accessToken = tokenService.createAccessToken(user.getId(), version, user.getUsername());
+            String refreshToken = tokenService.createRefreshToken(user.getId(), version, user.getUsername());
+            redisTemplate.opsForHash().put("auth:session:" + user.getId(), "loginIp", ip);
+            return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
+        } finally {
+            if (captchaRedisKey != null) {
+                redisTemplate.delete(captchaRedisKey);
             }
         }
-
-        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.getUsername()));
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            redisTemplate.opsForValue().increment(failKey);
-            redisTemplate.expire(failKey, Duration.ofMinutes(15));
-            throw new RuntimeException("账号或密码错误");
-        }
-
-        redisTemplate.delete(failKey);
-        String versionKey = "auth:token:version:" + user.getId();
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(versionKey))) {
-            redisTemplate.opsForValue().set(versionKey, "1");
-        }
-        int version = Integer.parseInt(redisTemplate.opsForValue().get(versionKey));
-        String accessToken = tokenService.createAccessToken(user.getId(), version, user.getUsername());
-        String refreshToken = tokenService.createRefreshToken(user.getId(), version, user.getUsername());
-        redisTemplate.opsForHash().put("auth:session:" + user.getId(), "loginIp", ip);
-        return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
     }
 
     public TokenResponse refresh(String refreshToken) {
@@ -137,9 +156,21 @@ public class AuthService {
             .toList();
     }
 
-    public String generateCaptcha(String captchaKey, Duration ttl) {
-        String code = String.valueOf((int) ((Math.random() * 9 + 1) * 1000));
+    public CaptchaPayload generateCaptcha(String captchaKey, Duration ttl) {
+        LineCaptcha lineCaptcha = CaptchaUtil.createLineCaptcha(
+            CAPTCHA_WIDTH,
+            CAPTCHA_HEIGHT,
+            CAPTCHA_LENGTH,
+            CAPTCHA_INTERFERE_COUNT
+        );
+        lineCaptcha.setGenerator(new RandomGenerator(CAPTCHA_CHAR_POOL, CAPTCHA_LENGTH));
+        lineCaptcha.createCode();
+
+        String code = lineCaptcha.getCode();
         redisTemplate.opsForValue().set("auth:captcha:" + captchaKey, code, ttl);
-        return code;
+        return new CaptchaPayload(lineCaptcha.getImageBase64Data(), ttl.toSeconds());
+    }
+
+    public record CaptchaPayload(String captchaImageBase64, long expireSeconds) {
     }
 }
