@@ -11,8 +11,8 @@ import lombok.Data;
 public class CaptchaResponse {
     /** 验证码 key */
     private String captchaKey;
-    /** 验证码值（开发环境明文返回，生产建议返回图片或关闭该字段） */
-    private String captchaCode;
+    /** 验证码图片 Base64 数据（不含 data:image 前缀） */
+    private String captchaImageBase64;
     /** 过期时间（秒） */
     private int expireSeconds;
 }

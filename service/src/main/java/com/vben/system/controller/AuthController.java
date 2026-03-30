@@ -68,15 +68,15 @@ public class AuthController {
         return ApiResponse.ok(authService.getAccessCodes(principal.getName()));
     }
 
-    @Operation(summary = "获取登录验证码", description = "生成4位数字验证码并写入 Redis")
+    @Operation(summary = "获取登录验证码", description = "生成4位数字字母组合验证码图片（Base64）并写入 Redis（校验不区分大小写）")
     @GetMapping("/captcha")
     public ApiResponse<CaptchaResponse> captcha() {
         String captchaKey = UUID.randomUUID().toString().replace("-", "");
         int expireSeconds = 120;
-        String captchaCode = authService.generateCaptcha(captchaKey, Duration.ofSeconds(expireSeconds));
+        AuthService.CaptchaPayload captchaPayload = authService.generateCaptcha(captchaKey, Duration.ofSeconds(expireSeconds));
         return ApiResponse.ok(CaptchaResponse.builder()
             .captchaKey(captchaKey)
-            .captchaCode(captchaCode)
+            .captchaImageBase64(captchaPayload.captchaImageBase64())
             .expireSeconds(expireSeconds)
             .build());
     }
