@@ -42,10 +42,12 @@
   "oxc.configPath": "oxlint.config.ts",
   "oxc.fmt.configPath": "oxfmt.config.ts",
   "eslint.useFlatConfig": true,
+  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
-    "source.fixAll.oxc": "explicit",
-    "source.fixAll.stylelint": "explicit",
+    "source.fixAll": "always",
+    "source.fixAll.eslint": "always",
+    "source.fixAll.oxc": "always",
+    "source.fixAll.stylelint": "always",
     "source.organizeImports": "never"
   },
   "editor.defaultFormatter": "oxc.oxc-vscode",
@@ -78,7 +80,7 @@
   },
 
   // extensions
-  "extensions.ignoreRecommendations": true,
+  "extensions.ignoreRecommendations": false,
 
   // terminal
   "terminal.integrated.cursorBlinking": true,

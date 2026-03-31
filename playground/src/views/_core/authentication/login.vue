@@ -6,11 +6,7 @@ import type { AuthApi } from '#/api/core/auth';
 
 import { computed, markRaw, useTemplateRef } from 'vue';
 
-import {
-  AuthenticationLogin,
-  ImageCaptcha,
-  z,
-} from '@vben/common-ui';
+import { AuthenticationLogin, ImageCaptcha, z } from '@vben/common-ui';
 import { $t } from '@vben/locales';
 
 import { getCaptchaApi } from '#/api/core/auth';
@@ -119,11 +115,14 @@ const formSchema = computed((): VbenFormSchema[] => {
         validateOnModelUpdate: false,
       },
       rules: z.object({
-        captchaCode: z.string().trim().min(1, {
-          message: $t('authentication.captchaPlaceholder'),
-        }),
+        captchaCode: z
+          .string()
+          .trim()
+          .min(1, {
+            message: $t('authentication.captchaPlaceholder'),
+          }),
         captchaKey: z.string().min(1, {
-          message:  $t('authentication.refresh'),
+          message: $t('authentication.refresh'),
         }),
       }),
     },
@@ -173,12 +172,13 @@ async function onSubmit(params: Recordable<any>) {
     const formApi = loginRef.value?.getFormApi();
     // 重置验证码组件的值
     formApi?.setFieldValue(
-      'captcha', 
+      'captcha',
       {
         captchaCode: '',
         captchaKey: '',
-      }, 
-      false);
+      },
+      false,
+    );
     // 使用表单API获取验证码组件实例，并调用其resume方法来重置验证码
     formApi
       ?.getFieldComponentRef<InstanceType<typeof ImageCaptcha>>('captcha')
