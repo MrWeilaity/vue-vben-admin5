@@ -1,4 +1,4 @@
-package com.vben.system.service.system;
+package com.vben.system.service.system.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vben.system.dto.system.log.OperationLogRecord;

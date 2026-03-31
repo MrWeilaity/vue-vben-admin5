@@ -1,8 +1,10 @@
-package com.vben.system.service.system;
+package com.vben.system.service.system.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vben.system.entity.SysMenu;
 import com.vben.system.mapper.SysMenuMapper;
+import com.vben.system.service.system.ISysMenuService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +15,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class SysMenuService {
+public class SysMenuService extends ServiceImpl<SysMenuMapper, SysMenu> implements ISysMenuService {
 
     private final SysMenuMapper menuMapper;
 

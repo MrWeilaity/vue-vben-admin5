@@ -120,8 +120,11 @@ public class AuthService {
     }
 
     public void logout(String accessToken, String refreshToken) {
-        var claims = tokenService.parse(accessToken);
-        redisTemplate.opsForValue().set("auth:blacklist:" + claims.getId(), "1", Duration.ofHours(1));
+        try {
+            var claims = tokenService.parse(accessToken);
+            redisTemplate.opsForValue().set("auth:blacklist:" + claims.getId(), "1", Duration.ofHours(1));
+        } catch (Exception ignored) {
+        }
         if (StringUtils.hasText(refreshToken)) {
             tokenService.removeRefreshToken(refreshToken);
         }

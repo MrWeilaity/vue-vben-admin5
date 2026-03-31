@@ -2,7 +2,7 @@ package com.vben.system.controller.system;
 
 import com.vben.system.common.ApiResponse;
 import com.vben.system.dto.system.log.OperationLogRecord;
-import com.vben.system.service.system.OperationLogService;
+import com.vben.system.service.system.impl.OperationLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

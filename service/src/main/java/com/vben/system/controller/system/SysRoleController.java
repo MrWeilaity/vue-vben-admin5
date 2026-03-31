@@ -5,7 +5,7 @@ import com.vben.system.dto.system.role.RoleCreateRequest;
 import com.vben.system.dto.system.role.RoleResponse;
 import com.vben.system.dto.system.role.RoleUpdateRequest;
 import com.vben.system.entity.SysRole;
-import com.vben.system.service.system.SysRoleService;
+import com.vben.system.service.system.impl.SysRoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

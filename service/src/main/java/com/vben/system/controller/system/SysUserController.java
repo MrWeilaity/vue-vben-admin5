@@ -1,16 +1,19 @@
 package com.vben.system.controller.system;
 
 import com.vben.system.common.ApiResponse;
+import com.vben.system.common.PageResult;
+import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.user.UserCreateRequest;
 import com.vben.system.dto.system.user.UserResponse;
 import com.vben.system.dto.system.user.UserUpdateRequest;
 import com.vben.system.entity.SysUser;
-import com.vben.system.service.system.SysUserService;
+import com.vben.system.service.system.impl.SysUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/system/user")
 @RequiredArgsConstructor
+@Validated
 public class SysUserController {
 
     private final SysUserService userService;
@@ -34,31 +38,8 @@ public class SysUserController {
      */
     @Operation(summary = "查询用户列表")
     @GetMapping("/list")
-    public ApiResponse<List<UserResponse>> list(
-        @RequestParam(required = false) String username,
-        @RequestParam(required = false) String nickname,
-        @RequestParam(required = false) Integer status
-    ) {
-        List<SysUser> users = userService.list(username, nickname, status);
-        List<Long> userIds = users.stream().map(SysUser::getId).toList();
-        var roleMap = userService.getRoleIdsByUserIds(userIds);
-        List<UserResponse> data = users
-            .stream()
-            .map(user -> UserResponse.builder()
-                .id(String.valueOf(user.getId()))
-                .username(user.getUsername())
-                .nickname(user.getNickname())
-                .deptId(String.valueOf(user.getDeptId()))
-                .email(user.getEmail())
-                .mobile(user.getMobile())
-                .status(user.getStatus())
-                .dataScope(user.getDataScope())
-                .remark(user.getRemark())
-                .roleIds(roleMap.getOrDefault(user.getId(), List.of()).stream().map(String::valueOf).toList())
-                .createTime(user.getCreateTime())
-                .build())
-            .toList();
-        return ApiResponse.ok(data);
+    public ApiResponse<PageResult<UserResponse>> list(@Valid UserParams userParams) {
+        return ApiResponse.ok(userService.list(userParams));
     }
 
     /**
@@ -88,7 +69,7 @@ public class SysUserController {
     /**
      * 更新用户。
      *
-     * @param id   用户 ID
+     * @param id      用户 ID
      * @param request 用户请求体
      * @return 空响应
      */

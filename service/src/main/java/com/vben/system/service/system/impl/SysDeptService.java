@@ -1,8 +1,10 @@
-package com.vben.system.service.system;
+package com.vben.system.service.system.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vben.system.entity.SysDept;
 import com.vben.system.mapper.SysDeptMapper;
+import com.vben.system.service.system.ISysDeptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +15,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class SysDeptService {
+public class SysDeptService extends ServiceImpl<SysDeptMapper, SysDept> implements ISysDeptService {
 
     private final SysDeptMapper deptMapper;
 

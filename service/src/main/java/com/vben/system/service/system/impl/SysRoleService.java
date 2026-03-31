@@ -1,8 +1,10 @@
-package com.vben.system.service.system;
+package com.vben.system.service.system.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vben.system.entity.SysRole;
 import com.vben.system.mapper.SysRoleMapper;
+import com.vben.system.service.system.ISysRoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +15,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class SysRoleService {
+public class SysRoleService extends ServiceImpl<SysRoleMapper, SysRole> implements ISysRoleService {
 
     private final SysRoleMapper roleMapper;
 

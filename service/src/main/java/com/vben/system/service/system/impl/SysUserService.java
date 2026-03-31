@@ -1,15 +1,21 @@
-package com.vben.system.service.system;
+package com.vben.system.service.system.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vben.system.common.PageResult;
+import com.vben.system.dto.params.UserParams;
+import com.vben.system.dto.system.user.UserResponse;
 import com.vben.system.entity.SysUser;
 import com.vben.system.entity.SysUserRole;
 import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.service.AuthService;
+import com.vben.system.service.system.ISysUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -23,7 +29,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class SysUserService {
+public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
 
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
@@ -34,14 +40,15 @@ public class SysUserService {
      *
      * @return 用户列表
      */
-    public List<SysUser> list(String username, String nickname, Integer status) {
-        return userMapper.selectList(
-            new LambdaQueryWrapper<SysUser>()
-                .like(StringUtils.hasText(username), SysUser::getUsername, username)
-                .like(StringUtils.hasText(nickname), SysUser::getNickname, nickname)
-                .eq(status != null, SysUser::getStatus, status)
+    public PageResult<UserResponse> list(UserParams userParams) {
+        Page<SysUser> page = new Page<>(userParams.getPage(), userParams.getPageSize());
+        Page<SysUser> result = lambdaQuery()
                 .orderByDesc(SysUser::getId)
-        );
+                .page(page);
+        List<UserResponse> list = result.getRecords().stream()
+                .map(SysUser::toUserResponse)
+                .toList();
+        return new PageResult<>(result.getTotal(), list);
     }
 
     /**
@@ -98,8 +105,8 @@ public class SysUserService {
             return Map.of();
         }
         return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>().in(SysUserRole::getUserId, userIds))
-            .stream()
-            .collect(Collectors.groupingBy(SysUserRole::getUserId, Collectors.mapping(SysUserRole::getRoleId, Collectors.toList())));
+                .stream()
+                .collect(Collectors.groupingBy(SysUserRole::getUserId, Collectors.mapping(SysUserRole::getRoleId, Collectors.toList())));
     }
 
     private void saveUserRoles(Long userId, List<Long> roleIds) {

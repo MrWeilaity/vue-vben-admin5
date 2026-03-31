@@ -1,7 +1,7 @@
 package com.vben.system.aspect;
 
 import com.vben.system.dto.system.log.OperationLogRecord;
-import com.vben.system.service.system.OperationLogService;
+import com.vben.system.service.system.impl.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;

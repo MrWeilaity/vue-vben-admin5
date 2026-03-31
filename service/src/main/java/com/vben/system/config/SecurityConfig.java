@@ -3,6 +3,7 @@ package com.vben.system.config;
 import com.vben.system.security.JwtAuthenticationFilter;
 import com.vben.system.security.RestAccessDeniedHandler;
 import com.vben.system.security.RestAuthenticationEntryPoint;
+import com.vben.system.security.SecurityWhitelist;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,14 +38,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint(restAuthenticationEntryPoint)
                 .accessDeniedHandler(restAccessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/auth/**",
-                    "/v3/api-docs/**",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/scalar/**",
-                    "/actuator/health"
-                ).permitAll()
+                .requestMatchers(SecurityWhitelist.publicMatchers()).permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

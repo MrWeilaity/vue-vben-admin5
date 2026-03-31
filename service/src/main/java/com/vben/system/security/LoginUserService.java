@@ -23,7 +23,7 @@ public class LoginUserService {
      * @return 当前登录用户 ID
      */
     public Long getCurrentUserId() {
-        return getCurrentUser().getId();
+        return SecurityUtils.getUserId();
     }
 
     /**

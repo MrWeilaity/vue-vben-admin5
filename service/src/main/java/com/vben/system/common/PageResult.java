@@ -11,6 +11,12 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class PageResult<T> {
+    /**
+     * 数据库总条数
+     */
     private long total;
-    private List<T> records;
+    /**
+     * 本次返回的数据
+     */
+    private List<T> items;
 }

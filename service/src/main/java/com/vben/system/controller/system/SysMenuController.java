@@ -5,7 +5,7 @@ import com.vben.system.dto.system.menu.MenuCreateRequest;
 import com.vben.system.dto.system.menu.MenuResponse;
 import com.vben.system.dto.system.menu.MenuUpdateRequest;
 import com.vben.system.entity.SysMenu;
-import com.vben.system.service.system.SysMenuService;
+import com.vben.system.service.system.impl.SysMenuService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vben.system.common.exception.ServiceException;

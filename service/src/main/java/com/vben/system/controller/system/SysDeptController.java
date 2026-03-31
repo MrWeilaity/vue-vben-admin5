@@ -5,7 +5,7 @@ import com.vben.system.dto.system.dept.DeptCreateRequest;
 import com.vben.system.dto.system.dept.DeptResponse;
 import com.vben.system.dto.system.dept.DeptUpdateRequest;
 import com.vben.system.entity.SysDept;
-import com.vben.system.service.system.SysDeptService;
+import com.vben.system.service.system.impl.SysDeptService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
