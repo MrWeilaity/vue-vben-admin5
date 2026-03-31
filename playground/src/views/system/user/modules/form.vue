@@ -14,7 +14,7 @@ import { useFormSchema } from '../data';
 const emits = defineEmits(['success']);
 
 const formData = ref<SystemUserApi.SystemUser>();
-const id = ref<string>();
+const id = ref<number>();
 
 const [Form, formApi] = useVbenForm({
   schema: useFormSchema(),
@@ -29,6 +29,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     drawerApi.lock();
     const payload = {
       ...values,
+      postIds: values.postIds ?? [],
       roleIds: values.roleIds ?? [],
     } as any;
     const { password, ...updatePayload } = payload;

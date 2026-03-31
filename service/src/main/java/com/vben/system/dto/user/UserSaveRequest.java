@@ -33,4 +33,6 @@ public class UserSaveRequest {
     private String remark;
     /** 角色ID集合 */
     private List<Long> roleIds;
+    /** 岗位ID集合 */
+    private List<Long> postIds;
 }

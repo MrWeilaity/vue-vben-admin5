@@ -1,23 +1,28 @@
 package com.vben.system.service.system.impl;
 
-import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vben.system.common.ApiResponse;
 import com.vben.system.common.PageResult;
 import com.vben.system.dto.params.UserParams;
+import com.vben.system.dto.system.user.UserCreateRequest;
 import com.vben.system.dto.system.user.UserResponse;
 import com.vben.system.dto.system.user.UserUpdateRequest;
+import com.vben.system.dto.user.UserPasswordResetRequest;
+import com.vben.system.entity.SysDept;
 import com.vben.system.entity.SysUser;
+import com.vben.system.entity.SysUserPost;
 import com.vben.system.entity.SysUserRole;
+import com.vben.system.mapper.SysDeptMapper;
 import com.vben.system.mapper.SysUserMapper;
+import com.vben.system.mapper.SysUserPostMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.service.AuthService;
 import com.vben.system.service.system.ISysUserService;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +42,10 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
 
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
+    private final SysUserPostMapper userPostMapper;
     private final AuthService authService;
+    private final SysDeptMapper deptMapper;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 查询用户列表（按 ID 倒序）。
@@ -47,10 +55,21 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     public PageResult<UserResponse> list(UserParams userParams) {
         Page<SysUser> page = new Page<>(userParams.getPage(), userParams.getPageSize());
         Page<SysUser> result = lambdaQuery()
+                .eq(userParams.getStatus()!=null, SysUser::getStatus, userParams.getStatus())
+                .like(StrUtil.isNotBlank(userParams.getUsername()), SysUser::getUsername, userParams.getUsername())
+                .like(StrUtil.isNotBlank(userParams.getNickname()), SysUser::getNickname, userParams.getNickname())
                 .orderByDesc(SysUser::getId)
                 .page(page);
+        List<Long> userIds = result.getRecords().stream().map(SysUser::getId).toList();
+        Map<Long, List<Long>> roleIdsByUserId = getRoleIdsByUserIds(userIds);
+        Map<Long, List<Long>> postIdsByUserId = getPostIdsByUserIds(userIds);
+        Map<Long, String> deptMap = getDeptNamesByDeptIds();
         List<UserResponse> list = result.getRecords().stream()
-                .map(SysUser::toUserResponse)
+                .map(user -> user.toUserResponse(
+                        roleIdsByUserId.getOrDefault(user.getId(), List.of()),
+                        postIdsByUserId.getOrDefault(user.getId(), List.of()),
+                        deptMap.get(user.getDeptId())
+                ))
                 .toList();
         return new PageResult<>(result.getTotal(), list);
     }
@@ -58,12 +77,25 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     /**
      * 新增用户。
      *
-     * @param user 用户实体
+     * @param request 用户新增数据
      */
     @Transactional(rollbackFor = Exception.class)
-    public void create(SysUser user, List<Long> roleIds) {
+    public void create(UserCreateRequest request) {
+        SysUser user = new SysUser();
+        user.setUsername(request.getUsername());
+        user.setNickname(request.getNickname());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setDeptId(request.getDeptId());
+        user.setEmail(request.getEmail());
+        user.setMobile(request.getMobile());
+        user.setStatus(request.getStatus());
+        user.setDataScope(request.getDataScope());
+        user.setRemark(request.getRemark());
+        List<Long> roleIds = request.getRoleIds() == null ? List.of() : request.getRoleIds();
+        List<Long> postIds = request.getPostIds() == null ? List.of() : request.getPostIds();
         userMapper.insert(user);
         saveUserRoles(user.getId(), roleIds);
+        saveUserPosts(user.getId(), postIds);
     }
 
     /**
@@ -76,19 +108,20 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     public void update(Long id, UserUpdateRequest updateUser) {
         lambdaUpdate().eq(SysUser::getId, id)
                 .set(StrUtil.isNotBlank(updateUser.getNickname()), SysUser::getNickname, updateUser.getNickname())
+                .set(updateUser.getDeptId() != null, SysUser::getDeptId, updateUser.getDeptId())
                 .set(StrUtil.isNotBlank(updateUser.getEmail()), SysUser::getEmail, updateUser.getEmail())
                 .set(StrUtil.isNotBlank(updateUser.getMobile()), SysUser::getMobile, updateUser.getMobile())
                 .set(updateUser.getStatus() != null, SysUser::getStatus, updateUser.getStatus())
+                .set(updateUser.getDataScope() != null, SysUser::getDataScope, updateUser.getDataScope())
                 .set(StrUtil.isNotBlank(updateUser.getRemark()), SysUser::getRemark, updateUser.getRemark())
                 .update();
-//        user.setId(id);
-//        int updatedRows = userMapper.updateById(user);
-//        if (updatedRows <= 0) {
-//            return;
-//        }
-        List<Long> roleIds = updateUser.getRoleIds();
-        if (CollectionUtil.isNotEmpty(roleIds)) {
+        if (updateUser.getRoleIds() != null) {
+            List<Long> roleIds = updateUser.getRoleIds();
             saveUserRoles(id, roleIds);
+        }
+        if (updateUser.getPostIds() != null) {
+            List<Long> postIds = updateUser.getPostIds();
+            saveUserPosts(id, postIds);
         }
     }
 
@@ -100,6 +133,7 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     public void delete(Long id) {
         userMapper.deleteById(id);
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
+        userPostMapper.delete(new LambdaQueryWrapper<SysUserPost>().eq(SysUserPost::getUserId, id));
         authService.forceOffline(id);
     }
 
@@ -119,6 +153,25 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>().in(SysUserRole::getUserId, userIds))
                 .stream()
                 .collect(Collectors.groupingBy(SysUserRole::getUserId, Collectors.mapping(SysUserRole::getRoleId, Collectors.toList())));
+    }
+
+    public Map<Long, List<Long>> getPostIdsByUserIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userPostMapper.selectList(new LambdaQueryWrapper<SysUserPost>().in(SysUserPost::getUserId, userIds))
+                .stream()
+                .collect(Collectors.groupingBy(SysUserPost::getUserId, Collectors.mapping(SysUserPost::getPostId, Collectors.toList())));
+    }
+
+    /**
+     * 获取部门的键值对组合 键：部门id 值：部门名称
+     *
+     * @return 部门id和部门名称的键值对组合
+     */
+    private Map<Long, String> getDeptNamesByDeptIds() {
+        return deptMapper.selectList(new LambdaQueryWrapper<SysDept>().select(SysDept::getId, SysDept::getName))
+                .stream().collect(Collectors.toMap(SysDept::getId, SysDept::getName));
     }
 
     /**
@@ -144,5 +197,41 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
             relations.add(relation);
         }
         relations.forEach(userRoleMapper::insert);
+    }
+
+    /**
+     * 保存用户和岗位的关系
+     *
+     * @param userId  用户id
+     * @param postIds 岗位id集合
+     */
+    private void saveUserPosts(Long userId, List<Long> postIds) {
+        userPostMapper.delete(new LambdaQueryWrapper<SysUserPost>().eq(SysUserPost::getUserId, userId));
+        if (postIds == null || postIds.isEmpty()) {
+            return;
+        }
+        Set<Long> distinctPostIds = new LinkedHashSet<>(postIds);
+        List<SysUserPost> relations = new ArrayList<>();
+        for (Long postId : distinctPostIds) {
+            if (postId == null) {
+                continue;
+            }
+            SysUserPost relation = new SysUserPost();
+            relation.setUserId(userId);
+            relation.setPostId(postId);
+            relations.add(relation);
+        }
+        relations.forEach(userPostMapper::insert);
+    }
+
+    /**
+     * 重置用户密码
+     *
+     * @param id      用户id
+     * @param request 重置密码请求体
+     */
+    public void resetPassword(Long id, UserPasswordResetRequest request) {
+        lambdaUpdate().eq(SysUser::getId, id)
+                .set(SysUser::getPassword, passwordEncoder.encode(request.getNewPassword()));
     }
 }

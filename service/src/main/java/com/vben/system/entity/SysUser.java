@@ -5,6 +5,8 @@ import com.vben.system.dto.system.user.UserResponse;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
 
 /**
  * SysUser 组件说明。
@@ -69,20 +71,28 @@ public class SysUser {
      */
     private LocalDateTime updateTime;
 
-    public UserResponse toUserResponse() {
+    /**
+     * 转换成前端需要的数据
+     *
+     * @param roleIds 角色id集合
+     * @param postIds 部门id集合
+     * @return
+     */
+    public UserResponse toUserResponse(List<Long> roleIds, List<Long> postIds, String dept) {
         return UserResponse.builder()
                 .id(getId())
                 .username(getUsername())
                 .nickname(getNickname())
+                .dept(dept)
                 .deptId(getDeptId())
                 .email(getEmail())
                 .mobile(getMobile())
                 .status(getStatus())
                 .dataScope(getDataScope())
                 .remark(getRemark())
+                .roleIds(new HashSet<>(roleIds).stream().toList())
+                .postIds(new HashSet<>(postIds).stream().toList())
                 .createTime(getCreateTime())
                 .build();
-
-
     }
 }

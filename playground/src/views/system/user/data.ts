@@ -3,6 +3,7 @@ import type { OnActionClickFn, VxeTableGridColumns } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
 import { getDeptList } from '#/api/system/dept';
+import { getPostList } from '#/api/system/post';
 import { getRoleList } from '#/api/system/role';
 import { $t } from '#/locales';
 
@@ -10,9 +11,23 @@ export function useFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
+      fieldName: 'id',
+      dependencies: {
+        show: false,
+        triggerFields: ['username'],
+      },
+    },
+    {
+      component: 'Input',
       fieldName: 'username',
       label: $t('system.user.username'),
       rules: 'required',
+      dependencies: {
+        show(values) {
+          return !values.id;
+        },
+        triggerFields: ['id'],
+      },
     },
     {
       component: 'Input',
@@ -48,6 +63,20 @@ export function useFormSchema(): VbenFormSchema[] {
           })),
       },
     },
+    {
+      component: 'ApiSelect',
+      fieldName: 'postIds',
+      label: '岗位',
+      componentProps: {
+        api: getPostList,
+        mode: 'multiple',
+        afterFetch: (data: Array<{ id: string; name: string }>) =>
+          data.map((item) => ({
+            label: item.name,
+            value: item.id,
+          })),
+      },
+    },
     { component: 'Input', fieldName: 'email', label: $t('system.user.email') },
     {
       component: 'Input',
@@ -73,9 +102,12 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'password',
       label: $t('authentication.password'),
       rules: 'required',
-      // dependencies: {
-      //   show: (values) => !values.id,
-      // },
+      dependencies: {
+        show(values) {
+          return !values.id;
+        },
+        triggerFields: ['id'],
+      },
     },
     {
       component: 'Textarea',
@@ -132,6 +164,11 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       width: 100,
     },
     {
+      width: 160,
+      field: 'dept',
+      title: $t('system.user.dept'),
+    },
+    {
       field: 'remark',
       title: $t('system.user.remark'),
       minWidth: 100,
@@ -140,11 +177,16 @@ export function useColumns<T = SystemUserApi.SystemUser>(
     {
       field: 'operation',
       title: $t('system.user.operation'),
-      width: 130,
+      width: 200,
       fixed: 'right',
       align: 'center',
       cellRender: {
         name: 'CellOperation',
+        options: [
+          'edit',
+          { code: 'reset-password', text: $t('system.user.resetPassword') },
+          'delete',
+        ],
         attrs: {
           nameField: 'username',
           nameTitle: $t('system.user.name'),

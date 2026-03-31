@@ -7,13 +7,20 @@ import type {
 } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
+import { h, ref } from 'vue';
+
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { Button, message, Modal } from 'ant-design-vue';
+import { Button, InputPassword, message, Modal } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteUser, getUserList, updateUser } from '#/api/system/user';
+import {
+  deleteUser,
+  getUserList,
+  resetUserPassword,
+  updateUser,
+} from '#/api/system/user';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -23,35 +30,45 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
   destroyOnClose: true,
 });
+const resetPasswordValue = ref('');
 
 function onActionClick({
   code,
   row,
 }: OnActionClickParams<SystemUserApi.SystemUser>) {
-  if (code === 'edit') {
-    formDrawerApi.setData(row).open();
-  } else if (code === 'delete') {
-    const hide = message.loading({
-      content: $t('ui.actionMessage.deleting', [row.username]),
-      duration: 0,
-      key: 'action_process_msg',
-    });
-    deleteUser(row.id)
-      .then(() => {
-        message.success({
-          content: $t('ui.actionMessage.deleteSuccess', [row.username]),
-          key: 'action_process_msg',
-        });
-        gridApi.query();
-      })
-      .catch(() => hide());
+  switch (code) {
+    case 'delete': {
+      const hide = message.loading({
+        content: $t('ui.actionMessage.deleting', [row.username]),
+        duration: 0,
+        key: 'action_process_msg',
+      });
+      deleteUser(row.id)
+        .then(() => {
+          message.success({
+            content: $t('ui.actionMessage.deleteSuccess', [row.username]),
+            key: 'action_process_msg',
+          });
+          onRefresh();
+        })
+        .catch(() => hide());
+
+      break;
+    }
+    case 'edit': {
+      formDrawerApi.setData(row).open();
+
+      break;
+    }
+    case 'reset-password': {
+      onResetPassword(row);
+
+      break;
+    }
+    // No default
   }
 }
-/**
- * 将Antd的Modal.confirm封装为promise，方便在异步函数中调用。
- * @param content 提示内容
- * @param title 提示标题
- */
+
 function confirm(content: string, title: string) {
   return new Promise((reslove, reject) => {
     Modal.confirm({
@@ -91,6 +108,49 @@ async function onStatusChange(
     return false;
   }
 }
+
+function onRefresh() {
+  gridApi.query();
+}
+
+function onCreate() {
+  formDrawerApi.setData({ status: 1 }).open();
+}
+
+function onResetPassword(row: SystemUserApi.SystemUser) {
+  resetPasswordValue.value = '';
+  Modal.confirm({
+    title: `重置 ${row.username} 的密码`,
+    content: h(InputPassword, {
+      autofocus: true,
+      placeholder: '请输入新密码',
+      value: resetPasswordValue.value,
+      'onUpdate:value': (value) => {
+        resetPasswordValue.value = value;
+      },
+    }),
+    async onOk() {
+      if (!resetPasswordValue.value) {
+        message.warning('请输入新密码');
+        throw new Error('请输入新密码');
+      }
+      const hide = message.loading({
+        content: '正在重置密码...',
+        duration: 0,
+        key: 'reset_password_msg',
+      });
+      try {
+        await resetUserPassword(row.id, resetPasswordValue.value);
+        message.success('重置密码成功');
+        hide();
+      } catch {
+        hide();
+        message.error('重置密码失败');
+      }
+    },
+  });
+}
+
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: { schema: useGridFormSchema(), submitOnChange: true },
   gridOptions: {
@@ -122,13 +182,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
 <template>
   <Page auto-content-height>
-    <FormDrawer @success="gridApi.query()" />
+    <FormDrawer @success="onRefresh" />
     <Grid :table-title="$t('system.user.list')">
       <template #toolbar-tools>
-        <Button
-          type="primary"
-          @click="formDrawerApi.setData({ status: 1 }).open()"
-        >
+        <Button type="primary" @click="onCreate">
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.user.name')]) }}
         </Button>

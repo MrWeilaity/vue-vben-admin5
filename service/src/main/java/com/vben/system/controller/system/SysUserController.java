@@ -6,6 +6,7 @@ import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.user.UserCreateRequest;
 import com.vben.system.dto.system.user.UserResponse;
 import com.vben.system.dto.system.user.UserUpdateRequest;
+import com.vben.system.dto.user.UserPasswordResetRequest;
 import com.vben.system.entity.SysUser;
 import com.vben.system.service.system.impl.SysUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +30,6 @@ import java.util.List;
 public class SysUserController {
 
     private final SysUserService userService;
-    private final PasswordEncoder passwordEncoder;
 
     /**
      * 获取用户列表。
@@ -51,18 +51,7 @@ public class SysUserController {
     @Operation(summary = "新增用户")
     @PostMapping
     public ApiResponse<Void> create(@Valid @RequestBody UserCreateRequest request) {
-        SysUser user = new SysUser();
-        user.setUsername(request.getUsername());
-        user.setNickname(request.getNickname());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setDeptId(request.getDeptId());
-        user.setEmail(request.getEmail());
-        user.setMobile(request.getMobile());
-        user.setStatus(request.getStatus());
-        user.setDataScope(request.getDataScope());
-        user.setRemark(request.getRemark());
-        List<Long> roleIds = request.getRoleIds() == null ? List.of() : request.getRoleIds();
-        userService.create(user, roleIds);
+        userService.create(request);
         return ApiResponse.ok(null);
     }
 
@@ -75,7 +64,7 @@ public class SysUserController {
      */
     @Operation(summary = "更新用户")
     @PutMapping("/{id}")
-    public ApiResponse<Void> update(@PathVariable Long id,@Valid @RequestBody UserUpdateRequest request) {
+    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
         userService.update(id, request);
         return ApiResponse.ok(null);
     }
@@ -90,6 +79,16 @@ public class SysUserController {
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         userService.delete(id);
+        return ApiResponse.ok(null);
+    }
+
+    /**
+     * 重置用户密码。
+     */
+    @Operation(summary = "重置用户密码")
+    @PostMapping("/reset-password/{id}")
+    public ApiResponse<Void> resetPassword(@PathVariable Long id, @RequestBody UserPasswordResetRequest request) {
+        userService.resetPassword(id, request);
         return ApiResponse.ok(null);
     }
 

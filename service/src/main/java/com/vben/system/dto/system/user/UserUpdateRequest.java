@@ -53,4 +53,8 @@ public class UserUpdateRequest {
      * 角色ID集合
      */
     private List<@Min(value = 1, message = "角色ID必须大于0") Long> roleIds;
+    /**
+     * 岗位ID集合
+     */
+    private List<@Min(value = 1, message = "岗位ID必须大于0") Long> postIds;
 }

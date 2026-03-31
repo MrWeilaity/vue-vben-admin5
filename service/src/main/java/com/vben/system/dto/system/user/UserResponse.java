@@ -23,8 +23,10 @@ public class UserResponse {
     private String username;
     /** 昵称 */
     private String nickname;
-    /** 部门ID */
+    /** 部门id */
     private Long deptId;
+    /** 部门名字 */
+    private String dept;
     /** 邮箱 */
     private String email;
     /** 手机号 */
@@ -36,7 +38,9 @@ public class UserResponse {
     /** 备注 */
     private String remark;
     /** 角色ID集合 */
-    private List<String> roleIds;
+    private List<Long> roleIds;
+    /** 岗位ID集合 */
+    private List<Long> postIds;
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
