@@ -1,5 +1,7 @@
 package com.vben.system.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -12,6 +14,7 @@ import java.time.LocalDateTime;
 @TableName("sys_role")
 public class SysRole {
     /** 主键ID */
+    @TableId(type = IdType.AUTO)
     private Long id;
     /** 名称 */
     private String name;

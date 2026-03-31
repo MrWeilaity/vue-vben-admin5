@@ -21,7 +21,7 @@ mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   global-config:
     db-config:
-      id-type: ASSIGN_ID
+      id-type: AUTO
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
