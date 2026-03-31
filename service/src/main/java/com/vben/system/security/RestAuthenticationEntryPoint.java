@@ -37,7 +37,11 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(
-            ApiResponse.fail(401, "未认证或认证已过期")
+            ApiResponse.fail(
+                401,
+                "未认证或认证已过期",
+                authException.getMessage()
+            )
         ));
     }
 }
