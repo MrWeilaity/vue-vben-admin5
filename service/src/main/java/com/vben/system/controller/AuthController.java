@@ -61,11 +61,8 @@ public class AuthController {
 
     @Operation(summary = "获取当前用户权限码", description = "根据当前登录用户返回权限码数组")
     @GetMapping("/codes")
-    public ApiResponse<java.util.List<String>> codes(java.security.Principal principal) {
-        if (principal == null || !StringUtils.hasText(principal.getName())) {
-            return ApiResponse.ok(java.util.List.of());
-        }
-        return ApiResponse.ok(authService.getAccessCodes(principal.getName()));
+    public ApiResponse<java.util.List<String>> codes() {
+        return ApiResponse.ok(authService.getAccessCodes());
     }
 
     @Operation(summary = "获取登录验证码", description = "生成4位数字字母组合验证码图片（Base64）并写入 Redis（校验不区分大小写）")

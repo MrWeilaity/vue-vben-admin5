@@ -4,15 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vben.system.common.ApiResponse;
-import com.vben.system.common.exception.UnauthorizedException;
+import com.vben.system.dto.core.UserInfo;
 import com.vben.system.entity.SysMenu;
-import com.vben.system.entity.SysRole;
-import com.vben.system.entity.SysUser;
-import com.vben.system.entity.SysUserRole;
 import com.vben.system.mapper.SysMenuMapper;
-import com.vben.system.mapper.SysRoleMapper;
-import com.vben.system.mapper.SysUserMapper;
-import com.vben.system.mapper.SysUserRoleMapper;
+import com.vben.system.service.CoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -34,33 +29,13 @@ import java.util.Map;
 public class CoreController {
     private final ObjectMapper objectMapper;
     private final SysMenuMapper menuMapper;
-    private final SysRoleMapper roleMapper;
-    private final SysUserMapper userMapper;
-    private final SysUserRoleMapper userRoleMapper;
+
+    private final CoreService coreService;
 
     @Operation(summary = "获取当前登录用户信息")
     @GetMapping("/user/info")
-    public ApiResponse<Map<String, Object>> info(java.security.Principal principal) {
-        if (principal == null || !StringUtils.hasText(principal.getName())) {
-            throw new UnauthorizedException("未登录或登录已过期");
-        }
-        SysUser user = userMapper.selectOne(
-            new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, principal.getName())
-        );
-        if (user == null) {
-            throw new UnauthorizedException("用户不存在或登录已过期");
-        }
-        List<String> roles = loadRoles(user.getId());
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("avatar", "https://unpkg.com/@vbenjs/static-source@0.1.7/source/avatar-v1.webp");
-        result.put("desc", user.getRemark() == null ? "欢迎回来" : user.getRemark());
-        result.put("homePath", "/dashboard/analytics");
-        result.put("realName", user.getNickname());
-        result.put("roles", roles);
-        result.put("token", "");
-        result.put("userId", String.valueOf(user.getId()));
-        result.put("username", user.getUsername());
-        return ApiResponse.ok(result);
+    public ApiResponse<UserInfo> info() {
+        return ApiResponse.ok(coreService.getUserInfo());
     }
 
     @Operation(summary = "获取当前用户菜单")
@@ -74,20 +49,6 @@ public class CoreController {
         return ApiResponse.ok(buildMenuTree(menus, 0L));
     }
 
-    private List<String> loadRoles(Long userId) {
-        List<Long> roleIds = userRoleMapper.selectList(
-            new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId)
-        ).stream().map(SysUserRole::getRoleId).toList();
-        if (roleIds.isEmpty()) {
-            return List.of();
-        }
-        return roleMapper.selectBatchIds(roleIds).stream()
-            .map(SysRole::getName)
-            .filter(StringUtils::hasText)
-            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new))
-            .stream()
-            .toList();
-    }
 
     private List<Map<String, Object>> buildMenuTree(List<SysMenu> all, Long pid) {
         return all.stream()

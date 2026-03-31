@@ -17,6 +17,7 @@ import com.vben.system.mapper.SysRoleMenuMapper;
 import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.security.JwtTokenService;
+import com.vben.system.security.LoginUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * AuthService 组件说明。
@@ -46,6 +48,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService tokenService;
     private final StringRedisTemplate redisTemplate;
+    private final LoginUserService loginUserService;
 
     public TokenResponse login(LoginRequest request, String ip) {
         String captchaRedisKey = null;
@@ -75,10 +78,10 @@ public class AuthService {
 
             redisTemplate.delete(failKey);
             String versionKey = "auth:token:version:" + user.getId();
-            if (Boolean.FALSE.equals(redisTemplate.hasKey(versionKey))) {
+            if (!redisTemplate.hasKey(versionKey)) {
                 redisTemplate.opsForValue().set(versionKey, "1");
             }
-            int version = Integer.parseInt(redisTemplate.opsForValue().get(versionKey));
+            int version = Integer.parseInt(Objects.requireNonNull(redisTemplate.opsForValue().get(versionKey)));
             String accessToken = tokenService.createAccessToken(user.getId(), version, user.getUsername());
             String refreshToken = tokenService.createRefreshToken(user.getId(), version, user.getUsername());
             redisTemplate.opsForHash().put("auth:session:" + user.getId(), "loginIp", ip);
@@ -131,39 +134,44 @@ public class AuthService {
         redisTemplate.opsForValue().set(versionKey, String.valueOf(version + 1));
     }
 
-    public List<String> getAccessCodes(String username) {
-        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username));
-        if (user == null) {
-            return List.of();
-        }
+    /**
+     * 根据用户 ID 获取权限码。
+     * <p>
+     * 用户唯一身份以 userId 为准，不依赖 username 做权限查询。
+     *
+     * @return 权限码列表；如果用户不存在或没有分配角色/权限，则返回空列表
+     */
+    public List<String> getAccessCodes() {
+        Long userId = loginUserService.getCurrentUserId();
+
         List<Long> roleIds = userRoleMapper.selectList(
-            new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, user.getId())
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId)
         ).stream().map(SysUserRole::getRoleId).distinct().toList();
         if (roleIds.isEmpty()) {
             return List.of();
         }
         List<Long> menuIds = roleMenuMapper.selectList(
-            new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds)
+                new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds)
         ).stream().map(SysRoleMenu::getMenuId).distinct().toList();
         if (menuIds.isEmpty()) {
             return List.of();
         }
         return menuMapper.selectBatchIds(menuIds).stream()
-            .filter(menu -> menu.getStatus() != null && menu.getStatus() == 1)
-            .map(SysMenu::getAuthCode)
-            .filter(StringUtils::hasText)
-            .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new))
-            .stream()
-            .sorted()
-            .toList();
+                .filter(menu -> menu.getStatus() != null && menu.getStatus() == 1)
+                .map(SysMenu::getAuthCode)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new))
+                .stream()
+                .sorted()
+                .toList();
     }
 
     public CaptchaPayload generateCaptcha(String captchaKey, Duration ttl) {
         LineCaptcha lineCaptcha = CaptchaUtil.createLineCaptcha(
-            CAPTCHA_WIDTH,
-            CAPTCHA_HEIGHT,
-            CAPTCHA_LENGTH,
-            CAPTCHA_INTERFERE_COUNT
+                CAPTCHA_WIDTH,
+                CAPTCHA_HEIGHT,
+                CAPTCHA_LENGTH,
+                CAPTCHA_INTERFERE_COUNT
         );
         lineCaptcha.setGenerator(new RandomGenerator(CAPTCHA_CHAR_POOL, CAPTCHA_LENGTH));
         lineCaptcha.createCode();
