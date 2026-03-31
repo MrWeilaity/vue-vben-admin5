@@ -48,6 +48,7 @@
   "qrcodeLogin": "QR Code Login",
   "qrcodePrompt": "Click 'Confirm' after scanning to complete login",
   "qrcodeSubtitle": "Scan the QR code with your phone to login",
+  "refresh": " Verification code failed to load, please refresh.",
   "refreshCaptcha": "Click to refresh",
   "rememberMe": "Remember Me",
   "selectAccount": "Quick Select Account",

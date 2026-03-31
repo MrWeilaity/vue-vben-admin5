@@ -22,6 +22,8 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: ASSIGN_ID
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 security:
   jwt:
@@ -44,8 +46,3 @@ springdoc:
 logging:
   level:
     root: INFO
-    com.vben.system: INFO
-    org.springframework.web: INFO
-    org.springframework.security: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{50} - %msg%n"

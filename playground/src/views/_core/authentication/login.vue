@@ -9,7 +9,6 @@ import { computed, markRaw, useTemplateRef } from 'vue';
 import {
   AuthenticationLogin,
   ImageCaptcha,
-  SliderCaptcha,
   z,
 } from '@vben/common-ui';
 import { $t } from '@vben/locales';
@@ -121,10 +120,10 @@ const formSchema = computed((): VbenFormSchema[] => {
       },
       rules: z.object({
         captchaCode: z.string().trim().min(1, {
-          message: '请输入验证码',
+          message: $t('authentication.captchaPlaceholder'),
         }),
         captchaKey: z.string().min(1, {
-          message: '验证码加载失败，请刷新',
+          message:  $t('authentication.refresh'),
         }),
       }),
     },
@@ -173,11 +172,17 @@ async function onSubmit(params: Recordable<any>) {
     // 登陆失败，刷新验证码的演示
     const formApi = loginRef.value?.getFormApi();
     // 重置验证码组件的值
-    formApi?.setFieldValue('captcha', false, false);
+    formApi?.setFieldValue(
+      'captcha', 
+      {
+        captchaCode: '',
+        captchaKey: '',
+      }, 
+      false);
     // 使用表单API获取验证码组件实例，并调用其resume方法来重置验证码
     formApi
-      ?.getFieldComponentRef<InstanceType<typeof SliderCaptcha>>('captcha')
-      ?.resume();
+      ?.getFieldComponentRef<InstanceType<typeof ImageCaptcha>>('captcha')
+      ?.refresh();
   });
 }
 </script>
