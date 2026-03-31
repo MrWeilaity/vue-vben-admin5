@@ -74,7 +74,7 @@ export async function refreshTokenApi(data?: AuthApi.RefreshTokenParams) {
  * 退出登录
  */
 export async function logoutApi(data?: AuthApi.RefreshTokenParams) {
-  return baseRequestClient.post('/auth/logout', data ?? null, {
+  return requestClient.post('/auth/logout', data ?? null, {
     withCredentials: true,
   });
 }
