@@ -37,7 +37,11 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(
-            ApiResponse.fail(403, "无权限访问")
+            ApiResponse.fail(
+                403,
+                "无权限访问",
+                accessDeniedException.getMessage()
+            )
         ));
     }
 }
