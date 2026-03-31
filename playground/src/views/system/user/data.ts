@@ -73,9 +73,9 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'password',
       label: $t('authentication.password'),
       rules: 'required',
-      dependencies: {
-        show: (values) => !values.id,
-      },
+      // dependencies: {
+      //   show: (values) => !values.id,
+      // },
     },
     {
       component: 'Textarea',
@@ -112,19 +112,29 @@ export function useGridFormSchema(): VbenFormSchema[] {
   ];
 }
 
-export function useColumns(
-  onActionClick: OnActionClickFn<SystemUserApi.SystemUser>,
-): VxeTableGridColumns<SystemUserApi.SystemUser> {
+export function useColumns<T = SystemUserApi.SystemUser>(
+  onActionClick: OnActionClickFn<T>,
+  onStatusChange?: (newStatus: any, row: T) => PromiseLike<boolean | undefined>,
+): VxeTableGridColumns<T> {
   return [
-    { field: 'username', title: $t('system.user.username'), width: 160 },
-    { field: 'nickname', title: $t('system.user.nickname'), width: 160 },
+    { field: 'username', title: $t('system.user.username'), width: 200 },
+    { field: 'nickname', title: $t('system.user.nickname'), width: 200 },
     { field: 'email', title: $t('system.user.email'), width: 200 },
-    { field: 'mobile', title: $t('system.user.mobile'), width: 160 },
+    { field: 'mobile', title: $t('system.user.mobile'), width: 200 },
+
     {
+      cellRender: {
+        attrs: { beforeChange: onStatusChange },
+        name: onStatusChange ? 'CellSwitch' : 'CellTag',
+      },
       field: 'status',
-      title: $t('system.user.status'),
+      title: $t('system.role.status'),
       width: 100,
-      cellRender: { name: 'CellTag' },
+    },
+    {
+      field: 'remark',
+      title: $t('system.user.remark'),
+      minWidth: 100,
     },
     { field: 'createTime', title: $t('system.user.createTime'), width: 180 },
     {

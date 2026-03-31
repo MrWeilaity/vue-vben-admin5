@@ -1,17 +1,21 @@
 package com.vben.system.service.system.impl;
 
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vben.system.common.PageResult;
 import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.user.UserResponse;
+import com.vben.system.dto.system.user.UserUpdateRequest;
 import com.vben.system.entity.SysUser;
 import com.vben.system.entity.SysUserRole;
 import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.service.AuthService;
 import com.vben.system.service.system.ISysUserService;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -65,17 +69,25 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     /**
      * 更新用户。
      *
-     * @param id   用户 ID
-     * @param user 用户实体
+     * @param id         用户 ID
+     * @param updateUser 用户更新请求体
      */
     @Transactional(rollbackFor = Exception.class)
-    public void update(Long id, SysUser user, List<Long> roleIds) {
-        user.setId(id);
-        int updatedRows = userMapper.updateById(user);
-        if (updatedRows <= 0) {
-            return;
-        }
-        if (roleIds != null) {
+    public void update(Long id, UserUpdateRequest updateUser) {
+        lambdaUpdate().eq(SysUser::getId, id)
+                .set(StrUtil.isNotBlank(updateUser.getNickname()), SysUser::getNickname, updateUser.getNickname())
+                .set(StrUtil.isNotBlank(updateUser.getEmail()), SysUser::getEmail, updateUser.getEmail())
+                .set(StrUtil.isNotBlank(updateUser.getMobile()), SysUser::getMobile, updateUser.getMobile())
+                .set(updateUser.getStatus() != null, SysUser::getStatus, updateUser.getStatus())
+                .set(StrUtil.isNotBlank(updateUser.getRemark()), SysUser::getRemark, updateUser.getRemark())
+                .update();
+//        user.setId(id);
+//        int updatedRows = userMapper.updateById(user);
+//        if (updatedRows <= 0) {
+//            return;
+//        }
+        List<Long> roleIds = updateUser.getRoleIds();
+        if (CollectionUtil.isNotEmpty(roleIds)) {
             saveUserRoles(id, roleIds);
         }
     }
@@ -109,6 +121,12 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
                 .collect(Collectors.groupingBy(SysUserRole::getUserId, Collectors.mapping(SysUserRole::getRoleId, Collectors.toList())));
     }
 
+    /**
+     * 保存用户和角色的关系
+     *
+     * @param userId  用户id
+     * @param roleIds 角色id组合
+     */
     private void saveUserRoles(Long userId, List<Long> roleIds) {
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
         if (roleIds == null || roleIds.isEmpty()) {

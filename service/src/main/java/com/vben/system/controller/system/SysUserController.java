@@ -75,16 +75,8 @@ public class SysUserController {
      */
     @Operation(summary = "更新用户")
     @PutMapping("/{id}")
-    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
-        SysUser user = new SysUser();
-        user.setNickname(request.getNickname());
-        user.setDeptId(request.getDeptId());
-        user.setEmail(request.getEmail());
-        user.setMobile(request.getMobile());
-        user.setStatus(request.getStatus());
-        user.setDataScope(request.getDataScope());
-        user.setRemark(request.getRemark());
-        userService.update(id, user, request.getRoleIds());
+    public ApiResponse<Void> update(@PathVariable Long id,@Valid @RequestBody UserUpdateRequest request) {
+        userService.update(id, request);
         return ApiResponse.ok(null);
     }
 
