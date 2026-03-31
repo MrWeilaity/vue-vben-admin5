@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity
             .status(ex.getHttpStatus())
-            .body(ApiResponse.fail(ex.getCode(), ex.getMessage()));
+            .body(ApiResponse.fail(ex.getCode(), ex.getMessage(), ex.getMessage()));
     }
 
     @ExceptionHandler({
@@ -55,7 +55,7 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.fail(400, "请求参数错误"));
+            .body(ApiResponse.fail(400, "请求参数错误", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
@@ -72,6 +72,6 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.fail(500, ex.getMessage()));
+            .body(ApiResponse.fail(500, "服务器内部错误", ex.getMessage()));
     }
 }
