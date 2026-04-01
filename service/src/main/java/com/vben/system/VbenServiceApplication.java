@@ -2,10 +2,12 @@ package com.vben.system;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * VbenServiceApplication 组件说明。
  */
+@EnableAsync
 @SpringBootApplication
 public class VbenServiceApplication {
 

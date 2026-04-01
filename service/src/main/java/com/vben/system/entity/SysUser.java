@@ -1,5 +1,7 @@
 package com.vben.system.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.vben.system.dto.system.user.UserResponse;
 import lombok.Data;
@@ -17,6 +19,7 @@ public class SysUser {
     /**
      * 主键ID
      */
+    @TableId(type = IdType.AUTO)
     private Long id;
     /**
      * 用户名

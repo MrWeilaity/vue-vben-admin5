@@ -1,8 +1,8 @@
 package com.vben.system.controller.system;
 
 import com.vben.system.common.ApiResponse;
-import com.vben.system.dto.system.log.OperationLogRecord;
-import com.vben.system.service.system.impl.OperationLogService;
+import com.vben.system.entity.SysOperationLog;
+import com.vben.system.service.system.ISysOperationLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +22,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysOperationLogController {
 
-    private final OperationLogService operationLogService;
+    private final ISysOperationLogService operationLogService;
 
     @Operation(summary = "查询操作日志列表")
     @GetMapping("/list")
-    public ApiResponse<List<OperationLogRecord>> list(
+    public ApiResponse<List<SysOperationLog>> list(
         @RequestParam(required = false) String keyword,
         @RequestParam(required = false, defaultValue = "200") Integer limit
     ) {
