@@ -33,18 +33,7 @@ public class SysDeptController {
     @Operation(summary = "查询部门列表")
     @GetMapping("/list")
     public ApiResponse<List<DeptResponse>> list() {
-        List<DeptResponse> data = deptService.list()
-            .stream()
-            .map(dept -> DeptResponse.builder()
-                .id(String.valueOf(dept.getId()))
-                .pid(String.valueOf(dept.getPid()))
-                .name(dept.getName())
-                .status(dept.getStatus())
-                .remark(dept.getRemark())
-                .createTime(dept.getCreateTime())
-                .build())
-            .toList();
-        return ApiResponse.ok(data);
+        return ApiResponse.ok(deptService.treeDeptList());
     }
 
     /**
@@ -56,31 +45,21 @@ public class SysDeptController {
     @Operation(summary = "新增部门")
     @PostMapping
     public ApiResponse<Void> create(@Valid @RequestBody DeptCreateRequest request) {
-        SysDept dept = new SysDept();
-        dept.setPid(request.getPid());
-        dept.setName(request.getName());
-        dept.setStatus(request.getStatus());
-        dept.setRemark(request.getRemark());
-        deptService.create(dept);
+        deptService.create(request);
         return ApiResponse.ok(null);
     }
 
     /**
      * 更新部门。
      *
-     * @param id   部门 ID
+     * @param id      部门 ID
      * @param request 部门请求体
      * @return 空响应
      */
     @Operation(summary = "更新部门")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody DeptUpdateRequest request) {
-        SysDept dept = new SysDept();
-        dept.setPid(request.getPid());
-        dept.setName(request.getName());
-        dept.setStatus(request.getStatus());
-        dept.setRemark(request.getRemark());
-        deptService.update(id, dept);
+        deptService.update(id, request);
         return ApiResponse.ok(null);
     }
 
