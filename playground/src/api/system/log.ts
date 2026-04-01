@@ -4,16 +4,25 @@ import { requestClient } from '#/api/request';
 
 export namespace SystemLogApi {
   export interface OperationLog {
+    actionType?: string;
+    bizStatusCode?: number;
+    clientAddress?: string;
+    clientIp?: string;
+    createTime?: string;
     durationMs: number;
-    error?: string;
-    ip?: string;
-    method?: string;
-    operation?: string;
-    path?: string;
-    rowKey?: string;
-    result?: string;
-    time?: string;
-    username?: string;
+    errorMessage?: string;
+    extData?: Recordable<any>;
+    httpStatusCode?: number;
+    id?: number;
+    module?: string;
+    occurTime?: string;
+    operationDesc?: string;
+    operatorDept?: string;
+    operatorUsername?: string;
+    requestMethod?: string;
+    requestParams?: string;
+    requestUrl?: string;
+    success?: number;
   }
 }
 
@@ -21,7 +30,7 @@ export namespace SystemLogApi {
  * 获取操作日志列表
  */
 async function getOperationLogList(params: Recordable<any> = {}) {
-  return requestClient.get<Array<SystemLogApi.OperationLog>>(
+  return await requestClient.get<Array<SystemLogApi.OperationLog>>(
     '/system/log/operation/list',
     { params },
   );

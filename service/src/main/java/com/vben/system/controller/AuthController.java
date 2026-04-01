@@ -6,6 +6,7 @@ import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.RefreshTokenRequest;
 import com.vben.system.dto.auth.TokenResponse;
 import com.vben.system.service.AuthService;
+import com.vben.system.util.RequestIpResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,11 +29,12 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+    private final RequestIpResolver requestIpResolver;
 
     @Operation(summary = "账号密码登录", description = "完成验证码校验、登录失败次数校验并签发 Access/Refresh Token")
     @PostMapping("/login")
     public ApiResponse<TokenResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpServletRequest) {
-        return ApiResponse.ok(authService.login(request, httpServletRequest.getRemoteAddr()));
+        return ApiResponse.ok(authService.login(request, requestIpResolver.resolve(httpServletRequest)));
     }
 
     @Operation(summary = "刷新访问令牌", description = "使用 Refresh Token 换取新的 Access Token 与 Refresh Token")

@@ -10,6 +10,7 @@ import com.vben.system.entity.SysUser;
 import com.vben.system.mapper.SysDeptMapper;
 import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.service.system.ISysOperationLogService;
+import com.vben.system.util.RequestIpResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.ServletRequest;
@@ -33,6 +34,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -55,6 +58,7 @@ public class OperationLogAspect {
     private final ObjectMapper objectMapper;
     private final SysUserMapper userMapper;
     private final SysDeptMapper deptMapper;
+    private final RequestIpResolver requestIpResolver;
 
     @Around("execution(* com.vben.system.controller..*(..))")
     public Object logOperation(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -101,7 +105,7 @@ public class OperationLogAspect {
     ) {
         SysOperationLog item = new SysOperationLog();
         item.setOccurTime(LocalDateTime.now());
-        item.setClientIp(limit(request.getRemoteAddr(), 64));
+        item.setClientIp(limit(requestIpResolver.resolve(request), 64));
         item.setRequestMethod(method);
         item.setRequestUrl(limit(path, 512));
         item.setRequestParams(buildRequestParams(joinPoint.getArgs()));
@@ -117,7 +121,7 @@ public class OperationLogAspect {
         item.setHttpStatusCode(httpStatus);
         item.setBizStatusCode(bizCode);
         item.setSuccess(throwable == null && httpStatus < 400 && bizCode == 0 ? 1 : 0);
-        item.setErrorMessage(shortError(throwable));
+        item.setErrorMessage(extractErrorMessage(throwable));
 
         Map<String, Object> ext = new HashMap<>();
         ext.put("operation", joinPoint.getSignature().toShortString());
@@ -280,11 +284,42 @@ public class OperationLogAspect {
         return operation.summary();
     }
 
-    private String shortError(Throwable throwable) {
-        if (throwable == null || throwable.getMessage() == null) {
+    private String extractErrorMessage(Throwable throwable) {
+        if (throwable == null) {
             return null;
         }
-        return truncate(throwable.getMessage());
+        String message = findBusinessMessage(throwable);
+        if (message != null) {
+            return truncate(message);
+        }
+        return truncate(stackTraceOf(throwable));
+    }
+
+    private String findBusinessMessage(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof ApiException && current.getMessage() != null && !current.getMessage().isBlank()) {
+                return current.getMessage();
+            }
+            current = current.getCause();
+        }
+        current = throwable;
+        while (current != null) {
+            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                return current.getMessage();
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private String stackTraceOf(Throwable throwable) {
+        StringWriter writer = new StringWriter();
+        try (PrintWriter printWriter = new PrintWriter(writer)) {
+            throwable.printStackTrace(printWriter);
+            printWriter.flush();
+            return writer.toString();
+        }
     }
 
     private String truncate(String value) {

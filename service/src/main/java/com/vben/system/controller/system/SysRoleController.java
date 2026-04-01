@@ -3,15 +3,10 @@ package com.vben.system.controller.system;
 import com.vben.system.common.ApiResponse;
 import com.vben.system.common.PageResult;
 import com.vben.system.dto.params.RoleParams;
-import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.role.RoleCreateRequest;
 import com.vben.system.dto.system.role.RoleResponse;
 import com.vben.system.dto.system.role.RoleUpdateRequest;
-import com.vben.system.entity.SysRole;
 import com.vben.system.service.system.impl.SysRoleService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vben.system.common.exception.ServiceException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,21 +27,25 @@ import java.util.List;
 public class SysRoleController {
 
     private final SysRoleService roleService;
-    private final ObjectMapper objectMapper;
 
     /**
-     * 获取角色列表。
+     * 分页查询角色列表。
      *
      * @return 角色列表
      */
-    @Operation(summary = "查询角色列表")
+    @Operation(summary = "分页查询角色列表")
     @GetMapping("/list")
     public ApiResponse<PageResult<RoleResponse>> list(@Valid RoleParams roleParams) {
 
         return ApiResponse.ok(roleService.listForResponse(roleParams));
     }
 
-    @Operation(summary = "查询角色列表")
+    /**
+     * 查询所有角色列表。
+     *
+     * @return 角色列表
+     */
+    @Operation(summary = "查询所有角色列表")
     @GetMapping("/allList")
     public ApiResponse<List<RoleResponse>> allList() {
 
@@ -91,17 +90,5 @@ public class SysRoleController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         roleService.delete(id);
         return ApiResponse.ok(null);
-    }
-
-    private List<Long> parsePermissions(String permissions) {
-        if (permissions == null || permissions.isBlank()) {
-            return List.of();
-        }
-        try {
-            return objectMapper.readValue(permissions, new TypeReference<>() {
-            });
-        } catch (Exception ex) {
-            return List.of();
-        }
     }
 }

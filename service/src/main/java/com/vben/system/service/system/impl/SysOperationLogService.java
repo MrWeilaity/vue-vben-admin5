@@ -1,24 +1,32 @@
 package com.vben.system.service.system.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vben.system.common.PageResult;
+import com.vben.system.common.exception.ServiceException;
+import com.vben.system.dto.params.OperationLogParams;
 import com.vben.system.entity.SysOperationLog;
 import com.vben.system.mapper.SysOperationLogMapper;
+import com.vben.system.service.system.IpLocationResolver;
 import com.vben.system.service.system.ISysOperationLogService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
+import java.time.LocalDate;
 
 /**
  * 操作日志服务。
  */
 @Slf4j
 @Service
-public class SysOperationLogService extends ServiceImpl<SysOperationLogMapper, SysOperationLog>
-    implements ISysOperationLogService {
+@RequiredArgsConstructor
+public class SysOperationLogService extends ServiceImpl<SysOperationLogMapper, SysOperationLog> implements ISysOperationLogService {
+
+    private final IpLocationResolver ipLocationResolver;
 
     @Override
     @Async("operationLogExecutor")
@@ -27,6 +35,9 @@ public class SysOperationLogService extends ServiceImpl<SysOperationLogMapper, S
             return;
         }
         try {
+            if (!StringUtils.hasText(record.getClientAddress())) {
+                record.setClientAddress(record.getClientIp() == null ? null : ipLocationResolver.resolve(record.getClientIp()));
+            }
             save(record);
         } catch (Exception e) {
             log.warn("操作日志写入数据库失败: {}", e.getMessage());
@@ -34,20 +45,27 @@ public class SysOperationLogService extends ServiceImpl<SysOperationLogMapper, S
     }
 
     @Override
-    public List<SysOperationLog> list(String keyword, int limit) {
-        int safeLimit = Math.max(1, Math.min(limit, 500));
-        LambdaQueryWrapper<SysOperationLog> query = new LambdaQueryWrapper<SysOperationLog>()
-            .orderByDesc(SysOperationLog::getId)
-            .last("LIMIT " + safeLimit);
-        if (StringUtils.hasText(keyword)) {
-            query.and(q -> q
-                .like(SysOperationLog::getOperatorUsername, keyword)
-                .or().like(SysOperationLog::getModule, keyword)
-                .or().like(SysOperationLog::getOperationDesc, keyword)
-                .or().like(SysOperationLog::getActionType, keyword)
-                .or().like(SysOperationLog::getRequestUrl, keyword)
-                .or().like(SysOperationLog::getErrorMessage, keyword));
+    public PageResult<SysOperationLog> getList(OperationLogParams operationLogParams) {
+        LocalDate startTime = operationLogParams.getStartTime();
+        LocalDate endTime = operationLogParams.getEndTime();
+        if (startTime != null && endTime != null && startTime.isAfter(endTime)) {
+            throw new ServiceException("开始时间不能大于结束时间");
         }
-        return list(query);
+
+        Page<SysOperationLog> page = new Page<>(operationLogParams.getPage(), operationLogParams.getPageSize());
+        var query = lambdaQuery()
+                .eq(operationLogParams.getSuccess() != null, SysOperationLog::getSuccess, operationLogParams.getSuccess())
+                .like(StrUtil.isNotBlank(operationLogParams.getModule()), SysOperationLog::getModule, operationLogParams.getModule());
+        if (startTime != null) {
+            query.ge(SysOperationLog::getOccurTime, startTime.atStartOfDay());
+        }
+        if (endTime != null) {
+            query.lt(SysOperationLog::getOccurTime, endTime.plusDays(1).atStartOfDay());
+        }
+        Page<SysOperationLog> result = query
+                .orderByDesc(SysOperationLog::getOccurTime)
+                .page(page);
+        return new PageResult<>(result.getTotal(), result.getRecords());
+
     }
 }
