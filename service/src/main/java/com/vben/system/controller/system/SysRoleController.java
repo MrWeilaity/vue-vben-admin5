@@ -1,15 +1,22 @@
 package com.vben.system.controller.system;
 
 import com.vben.system.common.ApiResponse;
+import com.vben.system.common.PageResult;
+import com.vben.system.dto.params.RoleParams;
+import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.role.RoleCreateRequest;
 import com.vben.system.dto.system.role.RoleResponse;
 import com.vben.system.dto.system.role.RoleUpdateRequest;
 import com.vben.system.entity.SysRole;
 import com.vben.system.service.system.impl.SysRoleService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vben.system.common.exception.ServiceException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,9 +28,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/system/role")
 @RequiredArgsConstructor
+@Validated
 public class SysRoleController {
 
     private final SysRoleService roleService;
+    private final ObjectMapper objectMapper;
 
     /**
      * 获取角色列表。
@@ -32,19 +41,16 @@ public class SysRoleController {
      */
     @Operation(summary = "查询角色列表")
     @GetMapping("/list")
-    public ApiResponse<List<RoleResponse>> list() {
-        List<RoleResponse> data = roleService.list()
-            .stream()
-            .map(role -> RoleResponse.builder()
-                .id(String.valueOf(role.getId()))
-                .name(role.getName())
-                .status(role.getStatus())
-                .remark(role.getRemark())
-                .createTime(role.getCreateTime())
-                .permissions(List.of())
-                .build())
-            .toList();
-        return ApiResponse.ok(data);
+    public ApiResponse<PageResult<RoleResponse>> list(@Valid RoleParams roleParams) {
+
+        return ApiResponse.ok(roleService.listForResponse(roleParams));
+    }
+
+    @Operation(summary = "查询角色列表")
+    @GetMapping("/allList")
+    public ApiResponse<List<RoleResponse>> allList() {
+
+        return ApiResponse.ok(roleService.allList());
     }
 
     /**
@@ -56,29 +62,21 @@ public class SysRoleController {
     @Operation(summary = "新增角色")
     @PostMapping
     public ApiResponse<Void> create(@Valid @RequestBody RoleCreateRequest request) {
-        SysRole role = new SysRole();
-        role.setName(request.getName());
-        role.setStatus(request.getStatus());
-        role.setRemark(request.getRemark());
-        roleService.create(role);
+        roleService.create(request);
         return ApiResponse.ok(null);
     }
 
     /**
      * 更新角色。
      *
-     * @param id   角色 ID
+     * @param id      角色 ID
      * @param request 角色请求体
      * @return 空响应
      */
     @Operation(summary = "更新角色")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequest request) {
-        SysRole role = new SysRole();
-        role.setName(request.getName());
-        role.setStatus(request.getStatus());
-        role.setRemark(request.getRemark());
-        roleService.update(id, role);
+        roleService.update(id, request);
         return ApiResponse.ok(null);
     }
 
@@ -93,5 +91,17 @@ public class SysRoleController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         roleService.delete(id);
         return ApiResponse.ok(null);
+    }
+
+    private List<Long> parsePermissions(String permissions) {
+        if (permissions == null || permissions.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(permissions, new TypeReference<>() {
+            });
+        } catch (Exception ex) {
+            return List.of();
+        }
     }
 }

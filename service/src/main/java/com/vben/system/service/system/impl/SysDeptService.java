@@ -2,16 +2,20 @@ package com.vben.system.service.system.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vben.system.common.exception.ServiceException;
 import com.vben.system.dto.system.dept.DeptCreateRequest;
 import com.vben.system.dto.system.dept.DeptResponse;
 import com.vben.system.dto.system.dept.DeptUpdateRequest;
 import com.vben.system.entity.SysDept;
+import com.vben.system.entity.SysUser;
 import com.vben.system.mapper.SysDeptMapper;
+import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.service.system.ISysDeptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -23,6 +27,7 @@ import java.util.*;
 public class SysDeptService extends ServiceImpl<SysDeptMapper, SysDept> implements ISysDeptService {
 
     private final SysDeptMapper deptMapper;
+    private final SysUserMapper userMapper;
 
     /**
      * 查询部门列表（按 ID 升序）。平铺结果，不构建树形结构。
@@ -73,6 +78,7 @@ public class SysDeptService extends ServiceImpl<SysDeptMapper, SysDept> implemen
      * @param request 新增部门实体
      */
     public void create(DeptCreateRequest request) {
+        checkPidLegitimate(null, request.getPid());
         SysDept dept = new SysDept();
         dept.setPid(request.getPid());
         dept.setName(request.getName());
@@ -88,16 +94,66 @@ public class SysDeptService extends ServiceImpl<SysDeptMapper, SysDept> implemen
      * @param updateRequest 编辑部门实体
      */
     public void update(Long id, DeptUpdateRequest updateRequest) {
-        if (Objects.equals(id, updateRequest.getPid())) {
-            throw new ServiceException("上级部门不能设置为自己的父部门");
+        SysDept current = deptMapper.selectById(id);
+        if (current == null) {
+            throw new ServiceException("部门不存在");
         }
+
+        Long pid = updateRequest.getPid();
+        checkPidLegitimate(id, pid);
+
         SysDept dept = new SysDept();
-        dept.setPid(updateRequest.getPid());
+        dept.setId(id);
+        dept.setPid(pid);
         dept.setName(updateRequest.getName());
         dept.setStatus(updateRequest.getStatus());
         dept.setRemark(updateRequest.getRemark());
-        dept.setId(id);
-        deptMapper.updateById(dept);
+
+        int updated = deptMapper.updateById(dept);
+        if (updated <= 0) {
+            throw new ServiceException("更新部门失败");
+        }
+    }
+
+
+    private void checkPidLegitimate(Long id, Long pid) {
+        if (pid == null) {
+            return;
+        }
+
+        if (pid <= 0) {
+            throw new ServiceException("请选择合适的上级部门");
+        }
+
+        if (Objects.equals(id, pid)) {
+            throw new ServiceException("上级部门不能设置为自己");
+        }
+
+        SysDept parentDept = deptMapper.selectById(pid);
+        if (parentDept == null) {
+            throw new ServiceException("上级部门不存在");
+        }
+
+        if (isDescendant(pid, id)) {
+            throw new ServiceException("上级部门不能设置为自己的子部门");
+        }
+    }
+
+    private boolean isDescendant(Long pid, Long currentId) {
+        Long parentId = pid;
+        while (parentId != null) {
+            if (Objects.equals(parentId, currentId)) {
+                return true;
+            }
+
+            SysDept parent = deptMapper.selectById(parentId);
+            if (parent == null) {
+                break;
+            }
+
+            parentId = parent.getPid();
+        }
+        return false;
     }
 
     /**
@@ -105,7 +161,24 @@ public class SysDeptService extends ServiceImpl<SysDeptMapper, SysDept> implemen
      *
      * @param id 部门 ID
      */
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
+        SysDept sysDept = deptMapper.selectById(id);
+        if (sysDept == null) {
+            throw new ServiceException("部门不存在");
+        }
+        Long childCount = deptMapper.selectCount(
+                new LambdaQueryWrapper<SysDept>().eq(SysDept::getPid, id)
+        );
+        if (childCount > 0) {
+            throw new ServiceException("请先删除子部门");
+        }
+
+        LambdaUpdateWrapper<SysUser> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(SysUser::getDeptId, id)
+                .set(SysUser::getDeptId, null);
+        userMapper.update(null, wrapper);
+
         deptMapper.deleteById(id);
     }
 }

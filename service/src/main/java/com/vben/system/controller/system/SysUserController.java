@@ -7,17 +7,14 @@ import com.vben.system.dto.system.user.UserCreateRequest;
 import com.vben.system.dto.system.user.UserResponse;
 import com.vben.system.dto.system.user.UserUpdateRequest;
 import com.vben.system.dto.user.UserPasswordResetRequest;
-import com.vben.system.entity.SysUser;
 import com.vben.system.service.system.impl.SysUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 /**
  * 用户管理控制器。

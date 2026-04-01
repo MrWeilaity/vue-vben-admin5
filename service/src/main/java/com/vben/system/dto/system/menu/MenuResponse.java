@@ -1,9 +1,10 @@
 package com.vben.system.dto.system.menu;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -11,25 +12,48 @@ import java.util.Map;
  */
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class MenuResponse {
-    /** 菜单ID */
-    private String id;
-    /** 父菜单ID */
-    private String pid;
-    /** 菜单名称 */
+    /**
+     * 菜单ID
+     */
+    private Long id;
+    /**
+     * 父菜单ID
+     */
+    private Long pid;
+    /**
+     * 菜单名称
+     */
     private String name;
-    /** 路由路径 */
+    /**
+     * 路由路径
+     */
     private String path;
-    /** 菜单类型 */
+    /**
+     * 菜单类型
+     * 'catalog',
+     * 'menu',
+     * 'embedded',
+     * 'link',
+     * 'button',
+     */
     private String type;
-    /** 组件路径 */
+    /**
+     * 组件路径
+     */
     private String component;
-    /** 权限标识 */
+    /**
+     * 权限标识
+     */
     private String authCode;
-    /** 状态 */
+    /**
+     * 状态
+     */
     private Integer status;
-    /** 菜单元数据 */
+    /**
+     * 菜单元数据
+     */
     private Map<String, Object> meta;
-    /** 创建时间 */
-    private LocalDateTime createTime;
+    private List<MenuResponse> children;
 }

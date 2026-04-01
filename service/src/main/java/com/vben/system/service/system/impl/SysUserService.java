@@ -55,7 +55,7 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     public PageResult<UserResponse> list(UserParams userParams) {
         Page<SysUser> page = new Page<>(userParams.getPage(), userParams.getPageSize());
         Page<SysUser> result = lambdaQuery()
-                .eq(userParams.getStatus()!=null, SysUser::getStatus, userParams.getStatus())
+                .eq(userParams.getStatus() != null, SysUser::getStatus, userParams.getStatus())
                 .like(StrUtil.isNotBlank(userParams.getUsername()), SysUser::getUsername, userParams.getUsername())
                 .like(StrUtil.isNotBlank(userParams.getNickname()), SysUser::getNickname, userParams.getNickname())
                 .orderByDesc(SysUser::getId)
@@ -130,6 +130,7 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      *
      * @param id 用户 ID
      */
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         userMapper.deleteById(id);
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));

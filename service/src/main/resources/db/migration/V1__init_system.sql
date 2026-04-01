@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS sys_role (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(64) NOT NULL,
     status SMALLINT NOT NULL DEFAULT 1,
+    permissions JSONB,
     remark VARCHAR(255),
     create_time TIMESTAMP NOT NULL,
     update_time TIMESTAMP NOT NULL,
@@ -38,15 +39,16 @@ COMMENT ON TABLE sys_role IS '角色表';
 COMMENT ON COLUMN sys_role.id IS '角色ID，主键，数据库自动生成（GENERATED ALWAYS）';
 COMMENT ON COLUMN sys_role.name IS '角色名称，唯一';
 COMMENT ON COLUMN sys_role.status IS '角色状态：1=启用，0=禁用';
+COMMENT ON COLUMN sys_role.permissions IS '权限ID集合(JSONB)';
 COMMENT ON COLUMN sys_role.remark IS '角色备注';
 COMMENT ON COLUMN sys_role.create_time IS '创建时间，由数据库触发器写入';
 COMMENT ON COLUMN sys_role.update_time IS '更新时间，由数据库触发器维护';
 
 CREATE TABLE IF NOT EXISTS sys_menu (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    pid BIGINT NOT NULL DEFAULT 0,
+    pid BIGINT,
     name VARCHAR(64) NOT NULL,
-    path VARCHAR(255) NOT NULL,
+    path VARCHAR(255),
     type VARCHAR(32) NOT NULL,
     component VARCHAR(255),
     auth_code VARCHAR(255),
@@ -59,9 +61,9 @@ CREATE TABLE IF NOT EXISTS sys_menu (
 
 COMMENT ON TABLE sys_menu IS '菜单表';
 COMMENT ON COLUMN sys_menu.id IS '菜单ID，主键，数据库自动生成（GENERATED ALWAYS）';
-COMMENT ON COLUMN sys_menu.pid IS '父菜单ID，0表示根节点';
+COMMENT ON COLUMN sys_menu.pid IS '父菜单ID，NULL表示根节点';
 COMMENT ON COLUMN sys_menu.name IS '菜单名称';
-COMMENT ON COLUMN sys_menu.path IS '前端路由路径，唯一';
+COMMENT ON COLUMN sys_menu.path IS '前端路由路径，按钮可为空';
 COMMENT ON COLUMN sys_menu.type IS '菜单类型：CATALOG=目录，MENU=菜单，BUTTON=按钮';
 COMMENT ON COLUMN sys_menu.component IS '前端组件路径';
 COMMENT ON COLUMN sys_menu.auth_code IS '权限标识码';
@@ -300,32 +302,65 @@ WHERE d.name = '总部'
 ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-VALUES (0, '系统管理', '/system', 'CATALOG', '', NULL, '{}', 1)
+VALUES (
+    NULL,
+    'System',
+    '/system',
+    'catalog',
+    NULL,
+    NULL,
+    '{"icon":"carbon:settings","order":9997,"title":"system.title","badge":"new","badgeType":"normal","badgeVariants":"primary"}',
+    1
+)
 ON CONFLICT (path) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-SELECT root.id, '用户管理', '/system/user', 'MENU', '/system/user/index', 'system:user:list', '{}', 1
+SELECT root.id, 'SystemMenu', '/system/menu', 'menu', '/system/menu/list', 'System:Menu:List', '{"icon":"carbon:menu","title":"system.menu.title"}', 1
 FROM sys_menu root
 WHERE root.path = '/system'
 ON CONFLICT (path) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-SELECT root.id, '角色管理', '/system/role', 'MENU', '/system/role/index', 'system:role:list', '{}', 1
+SELECT root.id, 'SystemDept', '/system/dept', 'menu', '/system/dept/list', 'System:Dept:List', '{"icon":"carbon:container-services","title":"system.dept.title"}', 1
 FROM sys_menu root
 WHERE root.path = '/system'
 ON CONFLICT (path) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-SELECT root.id, '菜单管理', '/system/menu', 'MENU', '/system/menu/index', 'system:menu:list', '{}', 1
-FROM sys_menu root
-WHERE root.path = '/system'
-ON CONFLICT (path) DO NOTHING;
+SELECT parent.id, 'SystemMenuCreate', NULL, 'button', NULL, 'System:Menu:Create', '{"title":"common.create"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/menu'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Menu:Create');
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-SELECT root.id, '部门管理', '/system/dept', 'MENU', '/system/dept/index', 'system:dept:list', '{}', 1
-FROM sys_menu root
-WHERE root.path = '/system'
-ON CONFLICT (path) DO NOTHING;
+SELECT parent.id, 'SystemMenuEdit', NULL, 'button', NULL, 'System:Menu:Edit', '{"title":"common.edit"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/menu'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Menu:Edit');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemMenuDelete', NULL, 'button', NULL, 'System:Menu:Delete', '{"title":"common.delete"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/menu'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Menu:Delete');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemDeptCreate', NULL, 'button', NULL, 'System:Dept:Create', '{"title":"common.create"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/dept'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Dept:Create');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemDeptEdit', NULL, 'button', NULL, 'System:Dept:Edit', '{"title":"common.edit"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/dept'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Dept:Edit');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemDeptDelete', NULL, 'button', NULL, 'System:Dept:Delete', '{"title":"common.delete"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/dept'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Dept:Delete');
 
 INSERT INTO sys_user_role (user_id, role_id)
 SELECT u.id, r.id
@@ -337,7 +372,18 @@ ON CONFLICT (user_id, role_id) DO NOTHING;
 INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT r.id, m.id
 FROM sys_role r
-JOIN sys_menu m ON m.path IN ('/system', '/system/user', '/system/role', '/system/menu', '/system/dept')
+JOIN sys_menu m
+  ON m.path IN ('/system', '/system/menu', '/system/dept')
+   OR m.auth_code IN (
+       'System:Menu:List',
+       'System:Menu:Create',
+       'System:Menu:Edit',
+       'System:Menu:Delete',
+       'System:Dept:List',
+       'System:Dept:Create',
+       'System:Dept:Edit',
+       'System:Dept:Delete'
+   )
 WHERE r.name = '超级管理员'
 ON CONFLICT (role_id, menu_id) DO NOTHING;
 

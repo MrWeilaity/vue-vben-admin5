@@ -24,6 +24,7 @@ mybatis-plus:
       id-type: AUTO
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
 
 security:
   jwt:

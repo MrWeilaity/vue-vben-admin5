@@ -20,7 +20,9 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 @Tag(name = "核心接口")
 @RestController
@@ -46,21 +48,22 @@ public class CoreController {
                 .eq(SysMenu::getStatus, 1)
                 .orderByAsc(SysMenu::getId)
         );
-        return ApiResponse.ok(buildMenuTree(menus, 0L));
+        return ApiResponse.ok(buildMenuTree(menus, null));
     }
 
 
     private List<Map<String, Object>> buildMenuTree(List<SysMenu> all, Long pid) {
         return all.stream()
-            .filter(item -> item.getPid() != null && item.getPid().equals(pid))
+            .filter(item -> Objects.equals(item.getPid(), pid))
             .sorted(Comparator.comparing(SysMenu::getId))
             .map(item -> {
+                String menuType = normalizeMenuType(item.getType());
                 Map<String, Object> route = new LinkedHashMap<>();
                 route.put("path", item.getPath());
                 route.put("name", normalizeRouteName(item.getName(), item.getId()));
                 route.put(
                     "component",
-                    "CATALOG".equals(item.getType()) ? "BasicLayout" : item.getComponent()
+                    "catalog".equals(menuType) ? "BasicLayout" : item.getComponent()
                 );
 
                 Map<String, Object> meta = parseMeta(item.getMetaJson());
@@ -95,5 +98,9 @@ public class CoreController {
         } catch (Exception ex) {
             return new LinkedHashMap<>();
         }
+    }
+
+    private String normalizeMenuType(String type) {
+        return type == null ? null : type.toLowerCase(Locale.ROOT);
     }
 }

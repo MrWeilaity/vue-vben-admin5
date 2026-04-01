@@ -4,7 +4,7 @@ import type { SystemUserApi } from '#/api/system/user';
 
 import { getDeptList } from '#/api/system/dept';
 import { getPostList } from '#/api/system/post';
-import { getRoleList } from '#/api/system/role';
+import { getRoleAllList } from '#/api/system/role';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -54,9 +54,10 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'roleIds',
       label: $t('system.role.name'),
       componentProps: {
-        api: getRoleList,
+        api: getRoleAllList,
+        class: 'w-full',
         mode: 'multiple',
-        afterFetch: (data: Array<{ id: string; name: string }>) =>
+        afterFetch: (data: { id: number; name: string }[]) =>
           data.map((item) => ({
             label: item.name,
             value: item.id,
@@ -69,8 +70,9 @@ export function useFormSchema(): VbenFormSchema[] {
       label: '岗位',
       componentProps: {
         api: getPostList,
+        class: 'w-full',
         mode: 'multiple',
-        afterFetch: (data: Array<{ id: string; name: string }>) =>
+        afterFetch: (data: { id: number; name: string }[]) =>
           data.map((item) => ({
             label: item.name,
             value: item.id,
