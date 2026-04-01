@@ -38,8 +38,8 @@ public class AuthController {
     @Operation(summary = "刷新访问令牌", description = "使用 Refresh Token 换取新的 Access Token 与 Refresh Token")
     @PostMapping("/refresh")
     public ApiResponse<TokenResponse> refresh(
-        @RequestBody(required = false) RefreshTokenRequest request,
-        @RequestHeader(value = "Authorization", required = false) String authorization
+            @RequestBody(required = false) RefreshTokenRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
         String refreshToken = request == null ? null : request.getRefreshToken();
         if (!StringUtils.hasText(refreshToken) && StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
@@ -51,11 +51,16 @@ public class AuthController {
     @Operation(summary = "退出登录", description = "将当前 Access Token 加入黑名单并移除 Refresh Token")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
-        @RequestHeader("Authorization") String authorization,
-        @RequestBody(required = false) Map<String, String> payload
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody(required = false) Map<String, String> payload
     ) {
         String refreshToken = payload == null ? null : payload.get("refreshToken");
-        authService.logout(authorization.replace("Bearer ", ""), refreshToken);
+        String accessToken = null;
+
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            accessToken = authorization.substring(7);
+        }
+        authService.logout(accessToken, refreshToken);
         return ApiResponse.ok(null);
     }
 
@@ -72,9 +77,9 @@ public class AuthController {
         int expireSeconds = 120;
         AuthService.CaptchaPayload captchaPayload = authService.generateCaptcha(captchaKey, Duration.ofSeconds(expireSeconds));
         return ApiResponse.ok(CaptchaResponse.builder()
-            .captchaKey(captchaKey)
-            .captchaImageBase64(captchaPayload.captchaImageBase64())
-            .expireSeconds(expireSeconds)
-            .build());
+                .captchaKey(captchaKey)
+                .captchaImageBase64(captchaPayload.captchaImageBase64())
+                .expireSeconds(expireSeconds)
+                .build());
     }
 }
