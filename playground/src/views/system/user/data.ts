@@ -3,7 +3,7 @@ import type { OnActionClickFn, VxeTableGridColumns } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
 import { getDeptList } from '#/api/system/dept';
-import { getPostList } from '#/api/system/post';
+import { getPostAllList } from '#/api/system/post';
 import { getRoleAllList } from '#/api/system/role';
 import { $t } from '#/locales';
 
@@ -69,7 +69,7 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'postIds',
       label: '岗位',
       componentProps: {
-        api: getPostList,
+        api: getPostAllList,
         class: 'w-full',
         mode: 'multiple',
         afterFetch: (data: { id: number; name: string }[]) =>

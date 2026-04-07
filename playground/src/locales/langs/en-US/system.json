@@ -75,6 +75,17 @@
     "typeLink": "Link",
     "typeMenu": "Menu"
   },
+  "post": {
+    "createTime": "Create Time",
+    "id": "Post ID",
+    "list": "Post List",
+    "name": "Post",
+    "operation": "Operation",
+    "postName": "Post Name",
+    "remark": "Remark",
+    "status": "Status",
+    "title": "Post Management"
+  },
   "role": {
     "createTime": "Creation Time",
     "id": "Role ID",

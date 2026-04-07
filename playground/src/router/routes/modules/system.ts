@@ -57,6 +57,15 @@ const routes: RouteRecordRaw[] = [
         },
         component: () => import('#/views/system/log/list.vue'),
       },
+      {
+        path: '/system/post',
+        name: 'SystemPost',
+        meta: {
+          icon: 'mdi:account',
+          title: $t('system.post.title'),
+        },
+        component: () => import('#/views/system/post/list.vue'),
+      },
     ],
   },
 ];

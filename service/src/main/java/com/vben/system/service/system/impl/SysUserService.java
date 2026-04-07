@@ -107,13 +107,13 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, UserUpdateRequest updateUser) {
         lambdaUpdate().eq(SysUser::getId, id)
-                .set(StrUtil.isNotBlank(updateUser.getNickname()), SysUser::getNickname, updateUser.getNickname())
+                .set(updateUser.getNickname()!=null, SysUser::getNickname, updateUser.getNickname())
                 .set(updateUser.getDeptId() != null, SysUser::getDeptId, updateUser.getDeptId())
-                .set(StrUtil.isNotBlank(updateUser.getEmail()), SysUser::getEmail, updateUser.getEmail())
-                .set(StrUtil.isNotBlank(updateUser.getMobile()), SysUser::getMobile, updateUser.getMobile())
+                .set(updateUser.getEmail()!=null, SysUser::getEmail, updateUser.getEmail())
+                .set(updateUser.getMobile()!=null, SysUser::getMobile, updateUser.getMobile())
                 .set(updateUser.getStatus() != null, SysUser::getStatus, updateUser.getStatus())
                 .set(updateUser.getDataScope() != null, SysUser::getDataScope, updateUser.getDataScope())
-                .set(StrUtil.isNotBlank(updateUser.getRemark()), SysUser::getRemark, updateUser.getRemark())
+                .set(updateUser.getRemark()!=null, SysUser::getRemark, updateUser.getRemark())
                 .update();
         if (updateUser.getRoleIds() != null) {
             List<Long> roleIds = updateUser.getRoleIds();

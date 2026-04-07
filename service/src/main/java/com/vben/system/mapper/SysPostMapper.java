@@ -2,9 +2,11 @@ package com.vben.system.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.vben.system.entity.SysPost;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 岗位 Mapper。
  */
+@Mapper
 public interface SysPostMapper extends BaseMapper<SysPost> {
 }

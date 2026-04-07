@@ -77,6 +77,17 @@
     "typeLink": "外链",
     "typeMenu": "菜单"
   },
+  "post": {
+    "createTime": "创建时间",
+    "id": "岗位ID",
+    "list": "岗位列表",
+    "name": "岗位",
+    "operation": "操作",
+    "postName": "岗位名称",
+    "remark": "备注",
+    "status": "状态",
+    "title": "岗位管理"
+  },
   "role": {
     "createTime": "创建时间",
     "id": "角色ID",
