@@ -131,7 +131,7 @@ export const errorMessageResponseInterceptor = (
       }
 
       let errorMessage: string;
-      const status = error?.response?.status;
+      const status = error?.response?.status ?? error?.code;
 
       switch (status) {
         case 400: {
@@ -152,6 +152,10 @@ export const errorMessageResponseInterceptor = (
         }
         case 408: {
           errorMessage = $t('ui.fallback.http.requestTimeout');
+          break;
+        }
+        case 498: {
+          errorMessage = $t('ui.fallback.http.refreshToken');
           break;
         }
         default: {

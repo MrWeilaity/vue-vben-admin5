@@ -6,6 +6,8 @@ import cn.hutool.captcha.generator.RandomGenerator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.vben.system.common.exception.BadRequestException;
 import com.vben.system.common.exception.ForbiddenException;
+import com.vben.system.common.exception.RefreshTokenExpiredException;
+import com.vben.system.common.exception.UnauthorizedException;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.TokenResponse;
 import com.vben.system.entity.SysUser;
@@ -93,7 +95,7 @@ public class AuthService {
             throw new BadRequestException("refresh token 不能为空");
         }
         if (!tokenService.existsRefreshToken(refreshToken)) {
-            throw new ForbiddenException("refresh token 已失效");
+            throw new RefreshTokenExpiredException("refresh token 已失效");
         }
         var claims = tokenService.parse(refreshToken);
         String tokenType = claims.get("typ", String.class);
@@ -106,10 +108,19 @@ public class AuthService {
         String username = claims.get("uname", String.class);
         SysUser user = userMapper.selectById(userId);
         if (user == null) {
+            tokenService.removeRefreshToken(refreshToken);
             throw new ForbiddenException("用户不存在或已被删除");
         }
         if (user.getStatus() == null || user.getStatus() != 1) {
+            tokenService.removeRefreshToken(refreshToken);
             throw new ForbiddenException("账号已被禁用，请联系管理员");
+        }
+        String versionKey = "auth:token:version:" + userId;
+        String currentVersion = redisTemplate.opsForValue().get(versionKey);
+        int latestVersion = Integer.parseInt(currentVersion == null ? "1" : currentVersion);
+        if (version != latestVersion) {
+            tokenService.removeRefreshToken(refreshToken);
+            throw new RefreshTokenExpiredException("refresh token 已失效");
         }
         if (!StringUtils.hasText(username)) {
             username = user.getUsername();

@@ -241,8 +241,13 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      * @param request 重置密码请求体
      */
     public void resetPassword(Long id, UserPasswordResetRequest request) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) {
+            throw new ServiceException("用户不存在或已被删除");
+        }
         lambdaUpdate().eq(SysUser::getId, id)
                 .set(SysUser::getPassword, passwordEncoder.encode(request.getNewPassword()))
                 .update();
+        authService.forceOffline(id);
     }
 }
