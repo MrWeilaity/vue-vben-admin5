@@ -94,14 +94,14 @@ public class OperationLogAspect {
     }
 
     private SysOperationLog buildLog(
-        ProceedingJoinPoint joinPoint,
-        jakarta.servlet.http.HttpServletRequest request,
-        jakarta.servlet.http.HttpServletResponse response,
-        String method,
-        String path,
-        long duration,
-        Object returnValue,
-        Throwable throwable
+            ProceedingJoinPoint joinPoint,
+            jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response,
+            String method,
+            String path,
+            long duration,
+            Object returnValue,
+            Throwable throwable
     ) {
         SysOperationLog item = new SysOperationLog();
         item.setOccurTime(LocalDateTime.now());
@@ -136,8 +136,8 @@ public class OperationLogAspect {
         }
         String p = path.toLowerCase(Locale.ROOT);
         return Arrays.asList("POST", "PUT", "DELETE", "PATCH").contains(method)
-            || p.contains("/import")
-            || p.contains("/export");
+                || p.contains("/import")
+                || p.contains("/export");
     }
 
     private void fillOperator(SysOperationLog item) {
@@ -148,13 +148,13 @@ public class OperationLogAspect {
         }
         String username = authentication.getName();
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-            .eq(SysUser::getUsername, username)
-            .last("LIMIT 1"));
+                .eq(SysUser::getUsername, username)
+                .last("LIMIT 1"));
         if (user != null) {
             item.setOperatorUserId(user.getId());
             item.setOperatorUsername(limit(
-                user.getNickname() == null || user.getNickname().isBlank() ? username : user.getNickname(),
-                64
+                    user.getNickname() == null || user.getNickname().isBlank() ? username : user.getNickname(),
+                    64
             ));
             if (user.getDeptId() != null) {
                 SysDept dept = deptMapper.selectById(user.getDeptId());
@@ -173,9 +173,9 @@ public class OperationLogAspect {
         }
         try {
             String json = objectMapper.writeValueAsString(Arrays.stream(args)
-                .filter(this::isRecordableArg)
-                .map(this::sanitizeArg)
-                .toList());
+                    .filter(this::isRecordableArg)
+                    .map(this::sanitizeArg)
+                    .toList());
             return truncate(json);
         } catch (Exception e) {
             return "[unserializable_params]";
@@ -187,12 +187,12 @@ public class OperationLogAspect {
             return true;
         }
         return !(arg instanceof ServletRequest
-            || arg instanceof ServletResponse
-            || arg instanceof MultipartFile
-            || arg instanceof InputStream
-            || arg instanceof OutputStream
-            || arg instanceof Resource
-            || arg instanceof byte[]);
+                || arg instanceof ServletResponse
+                || arg instanceof MultipartFile
+                || arg instanceof InputStream
+                || arg instanceof OutputStream
+                || arg instanceof Resource
+                || arg instanceof byte[]);
     }
 
     private Object sanitizeArg(Object arg) {
@@ -207,7 +207,7 @@ public class OperationLogAspect {
             return null;
         }
         if (returnValue instanceof byte[] || returnValue instanceof Resource || returnValue instanceof InputStream
-            || returnValue instanceof OutputStream) {
+                || returnValue instanceof OutputStream) {
             return "[stream_omitted]";
         }
         try {
