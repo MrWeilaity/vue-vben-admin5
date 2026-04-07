@@ -7,6 +7,8 @@ import { getPostAllList } from '#/api/system/post';
 import { getRoleAllList } from '#/api/system/role';
 import { $t } from '#/locales';
 
+const SYSTEM_ADMIN_USER_ID = 1;
+
 export function useFormSchema(): VbenFormSchema[] {
   return [
     {
@@ -187,7 +189,11 @@ export function useColumns<T = SystemUserApi.SystemUser>(
         options: [
           'edit',
           { code: 'reset-password', text: $t('system.user.resetPassword') },
-          'delete',
+          {
+            code: 'delete',
+            show: (row: T) =>
+              (row as SystemUserApi.SystemUser).id !== SYSTEM_ADMIN_USER_ID,
+          },
         ],
         attrs: {
           nameField: 'username',

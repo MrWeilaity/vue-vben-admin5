@@ -22,6 +22,7 @@ import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.service.AuthService;
 import com.vben.system.service.system.ISysUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,13 +40,14 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
-
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysUserPostMapper userPostMapper;
     private final AuthService authService;
     private final SysDeptMapper deptMapper;
     private final PasswordEncoder passwordEncoder;
+    @Value("${system.security.protected-user-id:1}")
+    private Long protectedUserId;
 
     /**
      * 查询用户列表（按 ID 倒序）。
@@ -135,6 +137,9 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         SysUser user = userMapper.selectById(id);
         if (user == null) {
             throw new ServiceException("用户不存在或已被删除");
+        }
+        if (protectedUserId != null && protectedUserId.equals(user.getId())) {
+            throw new ServiceException("系统管理员账号不允许删除");
         }
         userMapper.deleteById(id);
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));

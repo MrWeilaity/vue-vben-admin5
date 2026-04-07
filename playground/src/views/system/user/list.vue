@@ -31,6 +31,7 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
   destroyOnClose: true,
 });
 const resetPasswordValue = ref('');
+const SYSTEM_ADMIN_USER_ID = 1;
 
 function onActionClick({
   code,
@@ -38,6 +39,10 @@ function onActionClick({
 }: OnActionClickParams<SystemUserApi.SystemUser>) {
   switch (code) {
     case 'delete': {
+      if (row.id === SYSTEM_ADMIN_USER_ID) {
+        message.warning('系统管理员账号不允许删除');
+        return;
+      }
       const hide = message.loading({
         content: $t('ui.actionMessage.deleting', [row.username]),
         duration: 0,

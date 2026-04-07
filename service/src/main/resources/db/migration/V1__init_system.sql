@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS sys_operation_log (
     operation_desc VARCHAR(255) NOT NULL,
     action_type VARCHAR(32) NOT NULL,
     client_ip VARCHAR(64),
+    client_address VARCHAR(255),
     request_method VARCHAR(16),
     request_url VARCHAR(512),
     request_params TEXT,
@@ -178,7 +179,7 @@ CREATE TABLE IF NOT EXISTS sys_operation_log (
     http_status_code INTEGER,
     duration_ms BIGINT NOT NULL,
     success SMALLINT NOT NULL,
-    error_message VARCHAR(500),
+    error_message TEXT,
     ext_data JSONB NOT NULL DEFAULT '{}'::jsonb,
     create_time TIMESTAMP NOT NULL
 );
@@ -193,6 +194,7 @@ COMMENT ON COLUMN sys_operation_log.module IS '操作模块（来自Controller�
 COMMENT ON COLUMN sys_operation_log.operation_desc IS '具体操作描述（来自Controller方法上的@Operation.summary）';
 COMMENT ON COLUMN sys_operation_log.action_type IS '动作类型：CREATE=新增，UPDATE=修改，DELETE=删除，IMPORT=导入，EXPORT=导出，OTHER=其他';
 COMMENT ON COLUMN sys_operation_log.client_ip IS '客户端IP';
+COMMENT ON COLUMN sys_operation_log.client_address IS '客户端IP归属地，尽量精确到区';
 COMMENT ON COLUMN sys_operation_log.request_method IS '请求方法：GET/POST/PUT/PATCH/DELETE';
 COMMENT ON COLUMN sys_operation_log.request_url IS '请求URL';
 COMMENT ON COLUMN sys_operation_log.request_params IS '请求参数（TEXT，已裁剪且不含文件流）';
@@ -200,7 +202,7 @@ COMMENT ON COLUMN sys_operation_log.biz_status_code IS '业务状态码（ApiRes
 COMMENT ON COLUMN sys_operation_log.http_status_code IS 'HTTP状态码（例如200/400/401/403/500）';
 COMMENT ON COLUMN sys_operation_log.duration_ms IS '执行耗时（毫秒）';
 COMMENT ON COLUMN sys_operation_log.success IS '是否成功：1=成功，0=失败';
-COMMENT ON COLUMN sys_operation_log.error_message IS '简短错误提示（不存堆栈）';
+COMMENT ON COLUMN sys_operation_log.error_message IS '错误信息：优先记录业务异常提示，否则记录堆栈摘要';
 COMMENT ON COLUMN sys_operation_log.ext_data IS '兜底扩展字段（JSONB）';
 COMMENT ON COLUMN sys_operation_log.create_time IS '日志入库时间';
 
@@ -275,15 +277,15 @@ EXECUTE FUNCTION fn_set_create_update_time();
 -- =========================
 
 INSERT INTO sys_dept (pid, name, status, remark)
-VALUES (0, '总部', 1, '系统初始化部门')
+VALUES (0, '开发部', 1, '开发部门')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO sys_role (name, status, remark)
-VALUES ('超级管理员', 1, '系统初始化角色')
+VALUES ('super', 1, '超级管理员')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO sys_post (name, status, remark)
-VALUES ('系统管理员岗位', 1, '系统初始化岗位')
+VALUES ('总经理', 1, '总经理')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO sys_user (username, nickname, password, dept_id, email, mobile, status, data_scope, remark)
@@ -296,9 +298,9 @@ SELECT
     '13800000000',
     1,
     1,
-    '系统初始化用户'
+    '系统管理员'
 FROM sys_dept d
-WHERE d.name = '总部'
+WHERE d.name = '开发部'
 ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
@@ -322,6 +324,24 @@ ON CONFLICT (path) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
 SELECT root.id, 'SystemDept', '/system/dept', 'menu', '/system/dept/list', 'System:Dept:List', '{"icon":"carbon:container-services","title":"system.dept.title"}', 1
+FROM sys_menu root
+WHERE root.path = '/system'
+ON CONFLICT (path) DO NOTHING;
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT root.id, 'SystemRole', '/system/role', 'menu', '/system/role/list', 'System:Role:List', '{"icon":"carbon:user-role","title":"system.role.title"}', 1
+FROM sys_menu root
+WHERE root.path = '/system'
+ON CONFLICT (path) DO NOTHING;
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT root.id, 'SystemUser', '/system/user', 'menu', '/system/user/list', 'System:User:List', '{"icon":"carbon:user","title":"system.user.title"}', 1
+FROM sys_menu root
+WHERE root.path = '/system'
+ON CONFLICT (path) DO NOTHING;
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT root.id, 'SystemPost', '/system/post', 'menu', '/system/post/list', 'System:Post:List', '{"icon":"carbon:user-multiple","title":"system.post.title"}', 1
 FROM sys_menu root
 WHERE root.path = '/system'
 ON CONFLICT (path) DO NOTHING;
@@ -362,10 +382,70 @@ FROM sys_menu parent
 WHERE parent.path = '/system/dept'
   AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Dept:Delete');
 
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemRoleCreate', NULL, 'button', NULL, 'System:Role:Create', '{"title":"common.create"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/role'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Role:Create');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemRoleEdit', NULL, 'button', NULL, 'System:Role:Edit', '{"title":"common.edit"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/role'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Role:Edit');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemRoleDelete', NULL, 'button', NULL, 'System:Role:Delete', '{"title":"common.delete"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/role'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Role:Delete');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemUserCreate', NULL, 'button', NULL, 'System:User:Create', '{"title":"common.create"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/user'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:User:Create');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemUserEdit', NULL, 'button', NULL, 'System:User:Edit', '{"title":"common.edit"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/user'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:User:Edit');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemUserDelete', NULL, 'button', NULL, 'System:User:Delete', '{"title":"common.delete"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/user'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:User:Delete');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemUserResetPassword', NULL, 'button', NULL, 'System:User:ResetPassword', '{"title":"system.user.resetPassword"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/user'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:User:ResetPassword');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemPostCreate', NULL, 'button', NULL, 'System:Post:Create', '{"title":"common.create"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/post'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Post:Create');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemPostEdit', NULL, 'button', NULL, 'System:Post:Edit', '{"title":"common.edit"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/post'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Post:Edit');
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT parent.id, 'SystemPostDelete', NULL, 'button', NULL, 'System:Post:Delete', '{"title":"common.delete"}', 1
+FROM sys_menu parent
+WHERE parent.path = '/system/post'
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m WHERE m.auth_code = 'System:Post:Delete');
+
 INSERT INTO sys_user_role (user_id, role_id)
 SELECT u.id, r.id
 FROM sys_user u
-JOIN sys_role r ON r.name = '超级管理员'
+JOIN sys_role r ON r.name = 'super'
 WHERE u.username = 'admin'
 ON CONFLICT (user_id, role_id) DO NOTHING;
 
@@ -373,7 +453,7 @@ INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT r.id, m.id
 FROM sys_role r
 JOIN sys_menu m
-  ON m.path IN ('/system', '/system/menu', '/system/dept')
+  ON m.path IN ('/system', '/system/menu', '/system/dept', '/system/role', '/system/user', '/system/post')
    OR m.auth_code IN (
        'System:Menu:List',
        'System:Menu:Create',
@@ -382,14 +462,27 @@ JOIN sys_menu m
        'System:Dept:List',
        'System:Dept:Create',
        'System:Dept:Edit',
-       'System:Dept:Delete'
+        'System:Dept:Delete',
+        'System:Role:List',
+        'System:Role:Create',
+        'System:Role:Edit',
+        'System:Role:Delete',
+        'System:User:List',
+        'System:User:Create',
+        'System:User:Edit',
+        'System:User:Delete',
+        'System:User:ResetPassword',
+        'System:Post:List',
+        'System:Post:Create',
+        'System:Post:Edit',
+        'System:Post:Delete'
    )
-WHERE r.name = '超级管理员'
+WHERE r.name = 'super'
 ON CONFLICT (role_id, menu_id) DO NOTHING;
 
 INSERT INTO sys_user_post (user_id, post_id)
 SELECT u.id, p.id
 FROM sys_user u
-JOIN sys_post p ON p.name = '系统管理员岗位'
+JOIN sys_post p ON p.name = '总经理'
 WHERE u.username = 'admin'
 ON CONFLICT (user_id, post_id) DO NOTHING;

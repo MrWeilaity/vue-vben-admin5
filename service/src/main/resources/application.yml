@@ -47,3 +47,7 @@ springdoc:
 logging:
   level:
     root: INFO
+
+system:
+  security:
+    protected-user-id: 1 # 系统管理员账户
