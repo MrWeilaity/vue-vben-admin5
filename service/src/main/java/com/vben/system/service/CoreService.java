@@ -16,6 +16,7 @@ import com.vben.system.mapper.SysRoleMenuMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.security.LoginUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -33,6 +34,9 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class CoreService {
+    @Value("${system.security.protected-user-id:1}")
+    private Long protectedUserId;
+
     private final LoginUserService loginUserService;
     private final SysRoleMapper roleMapper;
     private final SysUserRoleMapper userRoleMapper;
@@ -60,6 +64,15 @@ public class CoreService {
         SysUser user = loginUserService.getCurrentUser();
         if (user.getStatus() == null || user.getStatus() != 1) {
             return List.of();
+        }
+
+        if (Objects.equals(user.getId(), protectedUserId)) {
+            List<SysMenu> menus = menuMapper.selectList(
+                    new LambdaQueryWrapper<SysMenu>()
+                            .eq(SysMenu::getStatus, 1)
+                            .orderByAsc(SysMenu::getId)
+            );
+            return buildMenuTree(menus, null);
         }
 
         List<Long> enabledRoleIds = getEnabledRoleIds(user.getId());

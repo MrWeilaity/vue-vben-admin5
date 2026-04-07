@@ -311,7 +311,7 @@ VALUES (
     'catalog',
     NULL,
     NULL,
-    '{"icon":"carbon:settings","order":9997,"title":"system.title","badge":"new","badgeType":"normal","badgeVariants":"primary"}',
+    '{"icon":"carbon:settings","order":9997,"title":"system.title"}',
     1
 )
 ON CONFLICT (path) DO NOTHING;
@@ -329,19 +329,25 @@ WHERE root.path = '/system'
 ON CONFLICT (path) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-SELECT root.id, 'SystemRole', '/system/role', 'menu', '/system/role/list', 'System:Role:List', '{"icon":"carbon:user-role","title":"system.role.title"}', 1
+SELECT root.id, 'SystemRole', '/system/role', 'menu', '/system/role/list', 'System:Role:List', '{"icon":"mdi:account-group","title":"system.role.title"}', 1
 FROM sys_menu root
 WHERE root.path = '/system'
 ON CONFLICT (path) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-SELECT root.id, 'SystemUser', '/system/user', 'menu', '/system/user/list', 'System:User:List', '{"icon":"carbon:user","title":"system.user.title"}', 1
+SELECT root.id, 'SystemUser', '/system/user', 'menu', '/system/user/list', 'System:User:List', '{"icon":"mdi:account","title":"system.user.title"}', 1
 FROM sys_menu root
 WHERE root.path = '/system'
 ON CONFLICT (path) DO NOTHING;
 
 INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
-SELECT root.id, 'SystemPost', '/system/post', 'menu', '/system/post/list', 'System:Post:List', '{"icon":"carbon:user-multiple","title":"system.post.title"}', 1
+SELECT root.id, 'SystemPost', '/system/post', 'menu', '/system/post/list', 'System:Post:List', '{"icon":"charm:briefcase","title":"system.post.title"}', 1
+FROM sys_menu root
+WHERE root.path = '/system'
+ON CONFLICT (path) DO NOTHING;
+
+INSERT INTO sys_menu (pid, name, path, type, component, auth_code, meta_json, status)
+SELECT root.id, 'SystemLog', '/system/log', 'menu', '/system/log/list', 'System:Log:List', '{"icon":"mdi:text-box-search-outline","title":"system.log.title"}', 1
 FROM sys_menu root
 WHERE root.path = '/system'
 ON CONFLICT (path) DO NOTHING;
@@ -453,7 +459,7 @@ INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT r.id, m.id
 FROM sys_role r
 JOIN sys_menu m
-  ON m.path IN ('/system', '/system/menu', '/system/dept', '/system/role', '/system/user', '/system/post')
+  ON m.path IN ('/system', '/system/menu', '/system/dept', '/system/role', '/system/user', '/system/post', '/system/log')
    OR m.auth_code IN (
        'System:Menu:List',
        'System:Menu:Create',
@@ -475,7 +481,8 @@ JOIN sys_menu m
         'System:Post:List',
         'System:Post:Create',
         'System:Post:Edit',
-        'System:Post:Delete'
+        'System:Post:Delete',
+        'System:Log:List'
    )
 WHERE r.name = 'super'
 ON CONFLICT (role_id, menu_id) DO NOTHING;

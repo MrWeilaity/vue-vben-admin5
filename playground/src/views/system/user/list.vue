@@ -9,6 +9,7 @@ import type { SystemUserApi } from '#/api/system/user';
 
 import { h, ref } from 'vue';
 
+import { useAccess } from '@vben/access';
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
@@ -32,6 +33,7 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
 });
 const resetPasswordValue = ref('');
 const SYSTEM_ADMIN_USER_ID = 1;
+const { hasAccessByCodes } = useAccess();
 
 function onActionClick({
   code,
@@ -159,7 +161,10 @@ function onResetPassword(row: SystemUserApi.SystemUser) {
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: { schema: useGridFormSchema(), submitOnChange: true },
   gridOptions: {
-    columns: useColumns(onActionClick, onStatusChange),
+    columns: useColumns(
+      onActionClick,
+      hasAccessByCodes(['System:User:Edit']) ? onStatusChange : undefined,
+    ),
     height: 'auto',
     keepSource: true,
     proxyConfig: {
@@ -190,7 +195,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormDrawer @success="onRefresh" />
     <Grid :table-title="$t('system.user.list')">
       <template #toolbar-tools>
-        <Button type="primary" @click="onCreate">
+        <Button
+          v-access:code="['System:User:Create']"
+          type="primary"
+          @click="onCreate"
+        >
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.user.name')]) }}
         </Button>

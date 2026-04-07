@@ -8,18 +8,11 @@ import com.vben.system.common.exception.BadRequestException;
 import com.vben.system.common.exception.ForbiddenException;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.TokenResponse;
-import com.vben.system.entity.SysMenu;
-import com.vben.system.entity.SysRole;
-import com.vben.system.entity.SysRoleMenu;
 import com.vben.system.entity.SysUser;
-import com.vben.system.entity.SysUserRole;
-import com.vben.system.mapper.SysMenuMapper;
-import com.vben.system.mapper.SysRoleMapper;
-import com.vben.system.mapper.SysRoleMenuMapper;
 import com.vben.system.mapper.SysUserMapper;
-import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.security.JwtTokenService;
 import com.vben.system.security.LoginUserService;
+import com.vben.system.security.PermissionCodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,16 +35,12 @@ public class AuthService {
     private static final int CAPTCHA_HEIGHT = 48;
     private static final int CAPTCHA_INTERFERE_COUNT = 20;
 
-
     private final SysUserMapper userMapper;
-    private final SysUserRoleMapper userRoleMapper;
-    private final SysRoleMenuMapper roleMenuMapper;
-    private final SysMenuMapper menuMapper;
-    private final SysRoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService tokenService;
     private final StringRedisTemplate redisTemplate;
     private final LoginUserService loginUserService;
+    private final PermissionCodeService permissionCodeService;
 
     public TokenResponse login(LoginRequest request, String ip) {
         String captchaRedisKey = null;
@@ -158,45 +146,11 @@ public class AuthService {
      * @return 权限码列表；如果用户不存在或没有分配角色/权限，则返回空列表
      */
     public List<String> getAccessCodes() {
-        Long userId = loginUserService.getCurrentUserId();
+        return permissionCodeService.getAccessCodesByUserId(loginUserService.getCurrentUserId());
+    }
 
-        SysUser user = userMapper.selectById(userId);
-        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
-            return List.of();
-        }
-
-        List<Long> roleIds = userRoleMapper.selectList(
-                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId)
-        ).stream().map(SysUserRole::getRoleId).distinct().toList();
-        if (roleIds.isEmpty()) {
-            return List.of();
-        }
-
-        List<Long> enabledRoleIds = roleMapper.selectBatchIds(roleIds).stream()
-                .filter(Objects::nonNull)
-                .filter(role -> role.getStatus() != null && role.getStatus() == 1)
-                .map(SysRole::getId)
-                .distinct()
-                .toList();
-        if (enabledRoleIds.isEmpty()) {
-            return List.of();
-        }
-
-        List<Long> menuIds = roleMenuMapper.selectList(
-                new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, enabledRoleIds)
-        ).stream().map(SysRoleMenu::getMenuId).distinct().toList();
-        if (menuIds.isEmpty()) {
-            return List.of();
-        }
-        return menuMapper.selectBatchIds(menuIds).stream()
-                .filter(Objects::nonNull)
-                .filter(menu -> menu.getStatus() != null && menu.getStatus() == 1)
-                .map(SysMenu::getAuthCode)
-                .filter(StringUtils::hasText)
-                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new))
-                .stream()
-                .sorted()
-                .toList();
+    public List<String> getAccessCodesByUserId(Long userId) {
+        return permissionCodeService.getAccessCodesByUserId(userId);
     }
 
     public CaptchaPayload generateCaptcha(String captchaKey, Duration ttl) {

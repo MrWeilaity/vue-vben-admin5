@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +36,7 @@ public class SysRoleController {
      */
     @Operation(summary = "分页查询角色列表")
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('System:Role:List')")
     public ApiResponse<PageResult<RoleResponse>> list(@Valid RoleParams roleParams) {
 
         return ApiResponse.ok(roleService.listForResponse(roleParams));
@@ -47,6 +49,7 @@ public class SysRoleController {
      */
     @Operation(summary = "查询所有角色列表")
     @GetMapping("/allList")
+    @PreAuthorize("hasAuthority('System:Role:List')")
     public ApiResponse<List<RoleResponse>> allList() {
 
         return ApiResponse.ok(roleService.allList());
@@ -60,6 +63,7 @@ public class SysRoleController {
      */
     @Operation(summary = "新增角色")
     @PostMapping
+    @PreAuthorize("hasAuthority('System:Role:Create')")
     public ApiResponse<Void> create(@Valid @RequestBody RoleCreateRequest request) {
         roleService.create(request);
         return ApiResponse.ok(null);
@@ -74,6 +78,7 @@ public class SysRoleController {
      */
     @Operation(summary = "更新角色")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:Role:Edit')")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequest request) {
         roleService.update(id, request);
         return ApiResponse.ok(null);
@@ -87,6 +92,7 @@ public class SysRoleController {
      */
     @Operation(summary = "删除角色")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:Role:Delete')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         roleService.delete(id);
         return ApiResponse.ok(null);

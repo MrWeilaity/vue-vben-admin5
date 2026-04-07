@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class SysDeptController {
      */
     @Operation(summary = "查询部门列表")
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('System:Dept:List')")
     public ApiResponse<List<DeptResponse>> list() {
         return ApiResponse.ok(deptService.treeDeptList());
     }
@@ -43,6 +45,7 @@ public class SysDeptController {
      */
     @Operation(summary = "新增部门")
     @PostMapping
+    @PreAuthorize("hasAuthority('System:Dept:Create')")
     public ApiResponse<Void> create(@Valid @RequestBody DeptCreateRequest request) {
         deptService.create(request);
         return ApiResponse.ok(null);
@@ -57,6 +60,7 @@ public class SysDeptController {
      */
     @Operation(summary = "更新部门")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:Dept:Edit')")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody DeptUpdateRequest request) {
         deptService.update(id, request);
         return ApiResponse.ok(null);
@@ -70,6 +74,7 @@ public class SysDeptController {
      */
     @Operation(summary = "删除部门")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:Dept:Delete')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         deptService.delete(id);
         return ApiResponse.ok(null);

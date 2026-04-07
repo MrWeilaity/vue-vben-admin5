@@ -2,6 +2,8 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridColumns } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
+import { useAccess } from '@vben/access';
+
 import { getDeptList } from '#/api/system/dept';
 import { getPostAllList } from '#/api/system/post';
 import { getRoleAllList } from '#/api/system/role';
@@ -152,6 +154,8 @@ export function useColumns<T = SystemUserApi.SystemUser>(
   onActionClick: OnActionClickFn<T>,
   onStatusChange?: (newStatus: any, row: T) => PromiseLike<boolean | undefined>,
 ): VxeTableGridColumns<T> {
+  const { hasAccessByCodes } = useAccess();
+
   return [
     { field: 'username', title: $t('system.user.username'), width: 200 },
     { field: 'nickname', title: $t('system.user.nickname'), width: 200 },
@@ -187,11 +191,19 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       cellRender: {
         name: 'CellOperation',
         options: [
-          'edit',
-          { code: 'reset-password', text: $t('system.user.resetPassword') },
+          {
+            code: 'edit',
+            show: () => hasAccessByCodes(['System:User:Edit']),
+          },
+          {
+            code: 'reset-password',
+            text: $t('system.user.resetPassword'),
+            show: () => hasAccessByCodes(['System:User:ResetPassword']),
+          },
           {
             code: 'delete',
             show: (row: T) =>
+              hasAccessByCodes(['System:User:Delete']) &&
               (row as SystemUserApi.SystemUser).id !== SYSTEM_ADMIN_USER_ID,
           },
         ],

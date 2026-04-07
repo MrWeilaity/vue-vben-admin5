@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +36,7 @@ public class SysUserController {
      */
     @Operation(summary = "查询用户列表")
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('System:User:List')")
     public ApiResponse<PageResult<UserResponse>> list(@Valid UserParams userParams) {
         return ApiResponse.ok(userService.list(userParams));
     }
@@ -47,6 +49,7 @@ public class SysUserController {
      */
     @Operation(summary = "新增用户")
     @PostMapping
+    @PreAuthorize("hasAuthority('System:User:Create')")
     public ApiResponse<Void> create(@Valid @RequestBody UserCreateRequest request) {
         userService.create(request);
         return ApiResponse.ok(null);
@@ -61,6 +64,7 @@ public class SysUserController {
      */
     @Operation(summary = "更新用户")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:User:Edit')")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
         userService.update(id, request);
         return ApiResponse.ok(null);
@@ -74,6 +78,7 @@ public class SysUserController {
      */
     @Operation(summary = "删除用户")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:User:Delete')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return ApiResponse.ok(null);
@@ -84,6 +89,7 @@ public class SysUserController {
      */
     @Operation(summary = "重置用户密码")
     @PostMapping("/reset-password/{id}")
+    @PreAuthorize("hasAuthority('System:User:ResetPassword')")
     public ApiResponse<Void> resetPassword(@PathVariable Long id, @RequestBody UserPasswordResetRequest request) {
         userService.resetPassword(id, request);
         return ApiResponse.ok(null);
@@ -97,6 +103,7 @@ public class SysUserController {
      */
     @Operation(summary = "强制下线用户")
     @PostMapping("/{id}/force-offline")
+    @PreAuthorize("hasAuthority('System:User:Edit')")
     public ApiResponse<Void> forceOffline(@PathVariable Long id) {
         userService.forceOffline(id);
         return ApiResponse.ok(null);

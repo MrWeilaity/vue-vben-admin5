@@ -4,23 +4,14 @@ import com.vben.system.common.ApiResponse;
 import com.vben.system.dto.system.menu.MenuCreateRequest;
 import com.vben.system.dto.system.menu.MenuResponse;
 import com.vben.system.dto.system.menu.MenuUpdateRequest;
-import com.vben.system.entity.SysMenu;
 import com.vben.system.service.system.impl.SysMenuService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vben.system.common.exception.ServiceException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 
 /**
  * 菜单管理控制器。
@@ -40,12 +31,14 @@ public class SysMenuController {
      */
     @Operation(summary = "查询菜单列表")
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('System:Menu:List')")
     public ApiResponse<List<MenuResponse>> list() {
         return ApiResponse.ok(menuService.buildMenuTree());
     }
 
     @Operation(summary = "校验菜单名称是否已存在")
     @GetMapping("/name-exists")
+    @PreAuthorize("hasAuthority('System:Menu:List')")
     public ApiResponse<Boolean> nameExists(@RequestParam String name,
                                            @RequestParam(required = false) Long id) {
         return ApiResponse.ok(menuService.existsByName(name, id));
@@ -53,6 +46,7 @@ public class SysMenuController {
 
     @Operation(summary = "校验菜单路径是否已存在")
     @GetMapping("/path-exists")
+    @PreAuthorize("hasAuthority('System:Menu:List')")
     public ApiResponse<Boolean> pathExists(@RequestParam String path,
                                            @RequestParam(required = false) Long id) {
         return ApiResponse.ok(menuService.existsByPath(path, id));
@@ -66,6 +60,7 @@ public class SysMenuController {
      */
     @Operation(summary = "新增菜单")
     @PostMapping
+    @PreAuthorize("hasAuthority('System:Menu:Create')")
     public ApiResponse<Void> create(@Valid @RequestBody MenuCreateRequest request) {
         menuService.create(request);
         return ApiResponse.ok(null);
@@ -80,6 +75,7 @@ public class SysMenuController {
      */
     @Operation(summary = "更新菜单")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:Menu:Edit')")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody MenuUpdateRequest request) {
         menuService.update(id, request);
         return ApiResponse.ok(null);
@@ -93,6 +89,7 @@ public class SysMenuController {
      */
     @Operation(summary = "删除菜单")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('System:Menu:Delete')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         menuService.delete(id);
         return ApiResponse.ok(null);

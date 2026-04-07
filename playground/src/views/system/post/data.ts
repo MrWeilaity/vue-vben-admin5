@@ -2,6 +2,8 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridColumns } from '#/adapter/vxe-table';
 import type { SystemPostApi } from '#/api';
 
+import { useAccess } from '@vben/access';
+
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -71,6 +73,8 @@ export function useColumns<T = SystemPostApi.SystemPost>(
   onActionClick: OnActionClickFn<T>,
   onStatusChange?: (newStatus: any, row: T) => PromiseLike<boolean | undefined>,
 ): VxeTableGridColumns {
+  const { hasAccessByCodes } = useAccess();
+
   return [
     {
       field: 'name',
@@ -110,6 +114,16 @@ export function useColumns<T = SystemPostApi.SystemPost>(
           onClick: onActionClick,
         },
         name: 'CellOperation',
+        options: [
+          {
+            code: 'edit',
+            show: () => hasAccessByCodes(['System:Post:Edit']),
+          },
+          {
+            code: 'delete',
+            show: () => hasAccessByCodes(['System:Post:Delete']),
+          },
+        ],
       },
       field: 'operation',
       fixed: 'right',
