@@ -9,10 +9,12 @@ import com.vben.system.common.exception.ForbiddenException;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.TokenResponse;
 import com.vben.system.entity.SysMenu;
+import com.vben.system.entity.SysRole;
 import com.vben.system.entity.SysRoleMenu;
 import com.vben.system.entity.SysUser;
 import com.vben.system.entity.SysUserRole;
 import com.vben.system.mapper.SysMenuMapper;
+import com.vben.system.mapper.SysRoleMapper;
 import com.vben.system.mapper.SysRoleMenuMapper;
 import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
@@ -25,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -45,6 +48,7 @@ public class AuthService {
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysMenuMapper menuMapper;
+    private final SysRoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService tokenService;
     private final StringRedisTemplate redisTemplate;
@@ -74,6 +78,9 @@ public class AuthService {
                 redisTemplate.opsForValue().increment(failKey);
                 redisTemplate.expire(failKey, Duration.ofMinutes(15));
                 throw new ForbiddenException("账号或密码错误");
+            }
+            if (user.getStatus() == null || user.getStatus() != 1) {
+                throw new ForbiddenException("账号已被禁用，请联系管理员");
             }
 
             redisTemplate.delete(failKey);
@@ -109,9 +116,15 @@ public class AuthService {
         Long userId = Long.valueOf(claims.getSubject());
         int version = claims.get("ver", Integer.class);
         String username = claims.get("uname", String.class);
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new ForbiddenException("用户不存在或已被删除");
+        }
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new ForbiddenException("账号已被禁用，请联系管理员");
+        }
         if (!StringUtils.hasText(username)) {
-            SysUser user = userMapper.selectById(userId);
-            username = user == null ? String.valueOf(userId) : user.getUsername();
+            username = user.getUsername();
         }
         String accessToken = tokenService.createAccessToken(userId, version, username);
         String newRefreshToken = tokenService.createRefreshToken(userId, version, username);
@@ -147,23 +160,40 @@ public class AuthService {
     public List<String> getAccessCodes() {
         Long userId = loginUserService.getCurrentUserId();
 
+        SysUser user = userMapper.selectById(userId);
+        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+            return List.of();
+        }
+
         List<Long> roleIds = userRoleMapper.selectList(
                 new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId)
         ).stream().map(SysUserRole::getRoleId).distinct().toList();
         if (roleIds.isEmpty()) {
             return List.of();
         }
+
+        List<Long> enabledRoleIds = roleMapper.selectBatchIds(roleIds).stream()
+                .filter(Objects::nonNull)
+                .filter(role -> role.getStatus() != null && role.getStatus() == 1)
+                .map(SysRole::getId)
+                .distinct()
+                .toList();
+        if (enabledRoleIds.isEmpty()) {
+            return List.of();
+        }
+
         List<Long> menuIds = roleMenuMapper.selectList(
-                new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds)
+                new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, enabledRoleIds)
         ).stream().map(SysRoleMenu::getMenuId).distinct().toList();
         if (menuIds.isEmpty()) {
             return List.of();
         }
         return menuMapper.selectBatchIds(menuIds).stream()
+                .filter(Objects::nonNull)
                 .filter(menu -> menu.getStatus() != null && menu.getStatus() == 1)
                 .map(SysMenu::getAuthCode)
                 .filter(StringUtils::hasText)
-                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new))
                 .stream()
                 .sorted()
                 .toList();

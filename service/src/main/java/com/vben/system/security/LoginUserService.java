@@ -48,6 +48,9 @@ public class LoginUserService {
         if (user == null) {
             throw new UnauthorizedException("用户不存在或登录已过期");
         }
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new UnauthorizedException("账号已被禁用，请重新登录");
+        }
         return user;
     }
 }

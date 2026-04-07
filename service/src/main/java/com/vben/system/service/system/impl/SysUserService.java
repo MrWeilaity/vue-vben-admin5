@@ -237,6 +237,7 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      */
     public void resetPassword(Long id, UserPasswordResetRequest request) {
         lambdaUpdate().eq(SysUser::getId, id)
-                .set(SysUser::getPassword, passwordEncoder.encode(request.getNewPassword()));
+                .set(SysUser::getPassword, passwordEncoder.encode(request.getNewPassword()))
+                .update();
     }
 }
