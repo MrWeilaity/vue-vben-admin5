@@ -16,9 +16,6 @@ import com.vben.system.entity.SysUserPost;
 import com.vben.system.mapper.SysPostMapper;
 import com.vben.system.mapper.SysUserPostMapper;
 import com.vben.system.service.system.ISysPostService;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,7 +125,7 @@ public class SysPostService extends ServiceImpl<SysPostMapper, SysPost> implemen
                 new LambdaQueryWrapper<SysUserPost>().eq(SysUserPost::getPostId, id)
         );
         if (relationCount != null && relationCount > 0) {
-            throw new ServiceException("该岗位已分配给用户，不能删除");
+            throw new ServiceException("该岗位已分配给 " + relationCount + " 个用户，请先解除岗位关联后再删除");
         }
 
         postMapper.deleteById(id);

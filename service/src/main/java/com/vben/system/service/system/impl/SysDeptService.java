@@ -2,7 +2,6 @@ package com.vben.system.service.system.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vben.system.common.exception.ServiceException;
 import com.vben.system.dto.system.dept.DeptCreateRequest;
@@ -165,19 +164,21 @@ public class SysDeptService extends ServiceImpl<SysDeptMapper, SysDept> implemen
     public void delete(Long id) {
         SysDept sysDept = deptMapper.selectById(id);
         if (sysDept == null) {
-            throw new ServiceException("部门不存在");
+            throw new ServiceException("部门不存在或已被删除");
         }
         Long childCount = deptMapper.selectCount(
                 new LambdaQueryWrapper<SysDept>().eq(SysDept::getPid, id)
         );
-        if (childCount > 0) {
-            throw new ServiceException("请先删除子部门");
+        if (childCount != null && childCount > 0) {
+            throw new ServiceException("该部门下仍有 " + childCount + " 个子部门，请先删除或迁移子部门后再删除");
         }
 
-        LambdaUpdateWrapper<SysUser> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(SysUser::getDeptId, id)
-                .set(SysUser::getDeptId, null);
-        userMapper.update(null, wrapper);
+        Long userCount = userMapper.selectCount(
+                new LambdaQueryWrapper<SysUser>().eq(SysUser::getDeptId, id)
+        );
+        if (userCount != null && userCount > 0) {
+            throw new ServiceException("该部门下仍有 " + userCount + " 个用户，请先调整用户所属部门后再删除");
+        }
 
         deptMapper.deleteById(id);
     }

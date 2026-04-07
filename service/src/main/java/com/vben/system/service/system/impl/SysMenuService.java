@@ -269,18 +269,22 @@ public class SysMenuService extends ServiceImpl<SysMenuMapper, SysMenu> implemen
     public void delete(Long id) {
         SysMenu menu = menuMapper.selectById(id);
         if (menu == null) {
-            throw new ServiceException("菜单不存在");
+            throw new ServiceException("菜单不存在或已被删除");
         }
         Long childCount = menuMapper.selectCount(
                 new LambdaQueryWrapper<SysMenu>().eq(SysMenu::getPid, id)
         );
-        if (childCount > 0) {
-            throw new ServiceException("请先删除子菜单");
+        if (childCount != null && childCount > 0) {
+            throw new ServiceException("该菜单下仍有 " + childCount + " 个子菜单，请先删除子菜单后再删除");
         }
 
-        roleMenuMapper.delete(
+        Long roleCount = roleMenuMapper.selectCount(
                 new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getMenuId, id)
         );
+        if (roleCount != null && roleCount > 0) {
+            throw new ServiceException("该菜单已分配给 " + roleCount + " 个角色，请先解除角色授权后再删除");
+        }
+
         menuMapper.deleteById(id);
     }
 

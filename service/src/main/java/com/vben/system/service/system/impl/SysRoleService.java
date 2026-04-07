@@ -24,7 +24,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 角色业务服务，处理角色增删改查。
@@ -77,12 +82,15 @@ public class SysRoleService extends ServiceImpl<SysRoleMapper, SysRole> implemen
 
         Page<SysRole> result = lambdaQueryChainWrapper.orderByDesc(SysRole::getId)
                 .page(page);
+        Map<Long, List<Long>> menuIdsByRoleId = getMenuIdsByRoleIds(
+                result.getRecords().stream().map(SysRole::getId).toList()
+        );
         List<RoleResponse> list = result.getRecords().stream()
                 .map(role -> RoleResponse.builder()
                         .id(role.getId())
                         .name(role.getName())
                         .status(role.getStatus())
-                        .permissions(role.getPermissions())
+                        .permissions(menuIdsByRoleId.getOrDefault(role.getId(), List.of()))
                         .remark(role.getRemark())
                         .createTime(role.getCreateTime())
                         .build())
@@ -95,6 +103,7 @@ public class SysRoleService extends ServiceImpl<SysRoleMapper, SysRole> implemen
      *
      * @param createRequest 新增角色实体
      */
+    @Transactional(rollbackFor = Exception.class)
     public void create(RoleCreateRequest createRequest) {
         SysRole sysRole = new SysRole();
         sysRole.setName(createRequest.getName());
@@ -102,6 +111,7 @@ public class SysRoleService extends ServiceImpl<SysRoleMapper, SysRole> implemen
         sysRole.setPermissions(createRequest.getPermissions());
         sysRole.setRemark(createRequest.getRemark());
         roleMapper.insert(sysRole);
+        syncRoleMenus(sysRole.getId(), createRequest.getPermissions());
     }
 
     /**
@@ -110,16 +120,18 @@ public class SysRoleService extends ServiceImpl<SysRoleMapper, SysRole> implemen
      * @param id            角色 ID
      * @param updateRequest 编辑角色实体
      */
+    @Transactional(rollbackFor = Exception.class)
     public void update(Long id, RoleUpdateRequest updateRequest) {
         SysRole role = roleMapper.selectById(id);
         if (role == null) {
-            throw new IllegalArgumentException("角色不存在");
+            throw new ServiceException("角色不存在");
         }
         role.setName(updateRequest.getName());
         role.setStatus(updateRequest.getStatus());
         role.setPermissions(updateRequest.getPermissions());
         role.setRemark(updateRequest.getRemark());
         roleMapper.updateById(role);
+        syncRoleMenus(id, updateRequest.getPermissions());
     }
 
     /**
@@ -131,10 +143,15 @@ public class SysRoleService extends ServiceImpl<SysRoleMapper, SysRole> implemen
     public void delete(Long id) {
         SysRole sysRole = roleMapper.selectById(id);
         if (sysRole == null) {
-            throw new ServiceException("角色不存在");
+            throw new ServiceException("角色不存在或已被删除");
+        }
+        Long userCount = userRoleMapper.selectCount(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getRoleId, id)
+        );
+        if (userCount != null && userCount > 0) {
+            throw new ServiceException("该角色已分配给 " + userCount + " 个用户，请先解除用户关联后再删除");
         }
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, id));
-        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getRoleId, id));
         roleMapper.deleteById(id);
     }
 
@@ -146,15 +163,51 @@ public class SysRoleService extends ServiceImpl<SysRoleMapper, SysRole> implemen
         if (CollectionUtil.isEmpty(sysRoles)) {
             return null;
         }
+        Map<Long, List<Long>> menuIdsByRoleId = getMenuIdsByRoleIds(
+                sysRoles.stream().map(SysRole::getId).toList()
+        );
         return sysRoles.stream()
                         .map(role -> RoleResponse.builder()
                                 .id(role.getId())
                                 .name(role.getName())
                                 .status(role.getStatus())
-                                .permissions(role.getPermissions())
+                                .permissions(menuIdsByRoleId.getOrDefault(role.getId(), List.of()))
                                 .remark(role.getRemark())
                                 .createTime(role.getCreateTime())
                                 .build())
                         .toList();
+    }
+
+    private Map<Long, List<Long>> getMenuIdsByRoleIds(List<Long> roleIds) {
+        if (CollectionUtil.isEmpty(roleIds)) {
+            return Map.of();
+        }
+        return roleMenuMapper.selectList(
+                        new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds)
+                ).stream()
+                .collect(Collectors.groupingBy(
+                        SysRoleMenu::getRoleId,
+                        Collectors.mapping(SysRoleMenu::getMenuId, Collectors.toList())
+                ));
+    }
+
+    private void syncRoleMenus(Long roleId, List<Long> menuIds) {
+        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
+        if (CollectionUtil.isEmpty(menuIds)) {
+            return;
+        }
+
+        Set<Long> distinctMenuIds = new LinkedHashSet<>(menuIds);
+        List<SysRoleMenu> relations = new ArrayList<>();
+        for (Long menuId : distinctMenuIds) {
+            if (menuId == null) {
+                continue;
+            }
+            SysRoleMenu relation = new SysRoleMenu();
+            relation.setRoleId(roleId);
+            relation.setMenuId(menuId);
+            relations.add(relation);
+        }
+        relations.forEach(roleMenuMapper::insert);
     }
 }

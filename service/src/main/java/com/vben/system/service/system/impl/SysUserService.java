@@ -4,8 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.vben.system.common.ApiResponse;
 import com.vben.system.common.PageResult;
+import com.vben.system.common.exception.ServiceException;
 import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.user.UserCreateRequest;
 import com.vben.system.dto.system.user.UserResponse;
@@ -132,6 +132,10 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) {
+            throw new ServiceException("用户不存在或已被删除");
+        }
         userMapper.deleteById(id);
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
         userPostMapper.delete(new LambdaQueryWrapper<SysUserPost>().eq(SysUserPost::getUserId, id));
