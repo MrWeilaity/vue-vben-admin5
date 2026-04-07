@@ -41,21 +41,23 @@ public class HttpIpLocationResolver implements IpLocationResolver {
             return null;
         }
         try {
-            HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(timeoutMs))
-                .build();
-            URI uri = UriComponentsBuilder.fromHttpUrl(url)
-                .queryParam("json", "true")
-                .queryParam("ip", ip)
-                .build(true)
-                .toUri();
-            HttpRequest request = HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofMillis(timeoutMs))
-                .header("Accept", "application/json")
-                .header("User-Agent", "vben-service/operation-log")
-                .GET()
-                .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response;
+            try (HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofMillis(timeoutMs))
+                    .build()) {
+                URI uri = UriComponentsBuilder.fromUriString(url)
+                        .queryParam("json", "true")
+                        .queryParam("ip", ip)
+                        .build(true)
+                        .toUri();
+                HttpRequest request = HttpRequest.newBuilder(uri)
+                        .timeout(Duration.ofMillis(timeoutMs))
+                        .header("Accept", "application/json")
+                        .header("User-Agent", "vben-service/operation-log")
+                        .GET()
+                        .build();
+                response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            }
             if (response.statusCode() < 200 || response.statusCode() >= 300 || !StringUtils.hasText(response.body())) {
                 return null;
             }
@@ -68,9 +70,9 @@ public class HttpIpLocationResolver implements IpLocationResolver {
             String city = trimToNull(root.path("city").asText(null));
             String district = trimToNull(root.path("region").asText(null));
             String joined = String.join("",
-                province == null ? "" : province,
-                city == null ? "" : city,
-                district == null ? "" : district
+                    province == null ? "" : province,
+                    city == null ? "" : city,
+                    district == null ? "" : district
             ).trim();
             return joined.isEmpty() ? null : joined;
         } catch (Exception e) {
@@ -93,10 +95,10 @@ public class HttpIpLocationResolver implements IpLocationResolver {
             }
         }
         return "127.0.0.1".equals(ip)
-            || "localhost".equalsIgnoreCase(ip)
-            || ip.startsWith("192.168.")
-            || ip.startsWith("10.")
-            || ip.startsWith("169.254.");
+                || "localhost".equalsIgnoreCase(ip)
+                || ip.startsWith("192.168.")
+                || ip.startsWith("10.")
+                || ip.startsWith("169.254.");
     }
 
     private String trimToNull(String value) {
