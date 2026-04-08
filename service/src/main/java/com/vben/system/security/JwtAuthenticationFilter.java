@@ -1,4 +1,5 @@
 package com.vben.system.security;
+
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -7,7 +8,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,8 +16,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.vben.system.service.AuthSessionService;
+
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * JWT 认证过滤器。
@@ -31,8 +35,8 @@ import java.util.List;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenService tokenService;
-    private final StringRedisTemplate redisTemplate;
     private final PermissionCodeService permissionCodeService;
+    private final AuthSessionService authSessionService;
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
@@ -46,15 +50,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             try {
                 Claims claims = tokenService.parse(token);
-                String jti = claims.getId();
-                // 命中黑名单说明 token 已经被主动注销，直接按未登录处理。
-                if (redisTemplate.hasKey("auth:blacklist:" + jti)) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
                 String tokenType = claims.get("typ", String.class);
-                // 兼容历史 access token：旧 token 不带 typ，允许在过渡期继续使用
-                if (StringUtils.hasText(tokenType) && !"access".equals(tokenType)) {
+                if (!"access".equals(tokenType)) {
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -75,32 +72,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                String username = claims.get("uname", String.class);
-                if (!StringUtils.hasText(username)) {
-                    // 如果 token 中没有用户名，退化为使用 userId，至少保证当前请求可识别出调用人。
-                    username = String.valueOf(userId);
-                }
-                Integer tokenVersion = claims.get("ver", Integer.class);
-                if (tokenVersion == null) {
-                    log.warn("JWT缺少版本号，已忽略本次认证: userId={}, uri={}, method={}", userId, request.getRequestURI(), request.getMethod());
+                String sessionId = claims.get("sid", String.class);
+                if (!StringUtils.hasText(sessionId)) {
+                    log.warn("JWT缺少sessionId，已忽略本次认证: userId={}, uri={}, method={}", userId, request.getRequestURI(), request.getMethod());
                     filterChain.doFilter(request, response);
                     return;
                 }
-                String versionInRedis = redisTemplate.opsForValue().get("auth:token:version:" + userId);
-                if (versionInRedis != null) {
-                    try {
-                        if (tokenVersion != Integer.parseInt(versionInRedis)) {
-                            filterChain.doFilter(request, response);
-                            return;
-                        }
-                    } catch (NumberFormatException ex) {
-                        log.warn("Redis中的token版本号不是数字，已拒绝本次认证: userId={}, versionInRedis={}", userId, versionInRedis);
-                        filterChain.doFilter(request, response);
-                        return;
-                    }
+                AuthSessionService.SessionRecord session = authSessionService.getSession(sessionId);
+                if (session == null) {
+                    log.warn("Redis中缺少登录会话，已拒绝本次认证: userId={}, sessionId={}", userId, sessionId);
+                    filterChain.doFilter(request, response);
+                    return;
                 }
+                if (!Objects.equals(userId, session.getUserId())) {
+                    log.warn("JWT用户与Redis会话用户不一致，已拒绝本次认证: tokenUserId={}, sessionUserId={}, sessionId={}",
+                            userId, session.getUserId(), sessionId);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                authSessionService.touchSession(sessionId, Duration.ofSeconds(tokenService.getAccessExpireSeconds()));
 
-                CurrentUserPrincipal principal = new CurrentUserPrincipal(userId, username);
+                String username = session.getUsername();
+                if (!StringUtils.hasText(username)) {
+                    username = claims.get("uname", String.class);
+                }
+                if (!StringUtils.hasText(username)) {
+                    username = String.valueOf(userId);
+                }
+                CurrentUserPrincipal principal = new CurrentUserPrincipal(userId, username, sessionId);
                 List<SimpleGrantedAuthority> authorities = permissionCodeService.getAccessCodesByUserId(userId).stream()
                         .map(SimpleGrantedAuthority::new)
                         .toList();
@@ -110,11 +109,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (Exception ex) {
                 log.error(
-                    "JWT解析失败: uri={}, method={}, message={}",
-                    request.getRequestURI(),
-                    request.getMethod(),
-                    ex.getMessage(),
-                    ex
+                        "JWT解析失败: uri={}, method={}, message={}",
+                        request.getRequestURI(),
+                        request.getMethod(),
+                        ex.getMessage(),
+                        ex
                 );
             }
         }

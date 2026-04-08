@@ -27,6 +27,15 @@ public class LoginUserService {
     }
 
     /**
+     * 获取当前登录会话 ID。
+     *
+     * @return 当前登录会话 ID
+     */
+    public String getCurrentSessionId() {
+        return SecurityUtils.getSessionId();
+    }
+
+    /**
      * 获取当前登录用户名。
      *
      * @return 当前登录用户名

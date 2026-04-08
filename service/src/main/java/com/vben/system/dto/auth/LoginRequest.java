@@ -8,14 +8,24 @@ import lombok.Data;
  */
 @Data
 public class LoginRequest {
-    /** 用户名 */
-    @NotBlank
+    /**
+     * 用户名
+     */
+    @NotBlank(message = "不能为空")
     private String username;
-    /** 密码 */
-    @NotBlank
+    /**
+     * 密码
+     */
+    @NotBlank(message = "不能为空")
     private String password;
-    /** 验证码Key */
+    /**
+     * 验证码Key
+     */
+    @NotBlank(message = "不能为空")
     private String captchaKey;
-    /** 验证码 */
+    /**
+     * 验证码
+     */
+    @NotBlank(message = "不能为空")
     private String captchaCode;
 }

@@ -4,13 +4,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Date;
 import java.util.UUID;
 
@@ -23,27 +21,24 @@ public class JwtTokenService {
     private final String issuer;
     private final long accessExpireSeconds;
     private final long refreshExpireSeconds;
-    private final StringRedisTemplate redisTemplate;
 
     public JwtTokenService(
         @Value("${security.jwt.secret}") String secret,
         @Value("${security.jwt.issuer}") String issuer,
         @Value("${security.jwt.access-token-expire-seconds}") long accessExpireSeconds,
-        @Value("${security.jwt.refresh-token-expire-seconds}") long refreshExpireSeconds,
-        StringRedisTemplate redisTemplate
+        @Value("${security.jwt.refresh-token-expire-seconds}") long refreshExpireSeconds
     ) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.issuer = issuer;
         this.accessExpireSeconds = accessExpireSeconds;
         this.refreshExpireSeconds = refreshExpireSeconds;
-        this.redisTemplate = redisTemplate;
     }
 
-    public String createAccessToken(Long userId, int version) {
-        return createAccessToken(userId, version, null);
+    public String createAccessToken(Long userId, String sessionId) {
+        return createAccessToken(userId, sessionId, null);
     }
 
-    public String createAccessToken(Long userId, int version, String username) {
+    public String createAccessToken(Long userId, String sessionId, String username) {
         String jti = UUID.randomUUID().toString();
         Date now = new Date();
         Date exp = new Date(now.getTime() + accessExpireSeconds * 1000);
@@ -51,7 +46,7 @@ public class JwtTokenService {
             .issuer(issuer)
             .subject(String.valueOf(userId))
             .id(jti)
-            .claim("ver", version)
+            .claim("sid", sessionId)
             .claim("typ", "access")
             .issuedAt(now)
             .expiration(exp)
@@ -62,11 +57,11 @@ public class JwtTokenService {
         return builder.compact();
     }
 
-    public String createRefreshToken(Long userId, int version) {
-        return createRefreshToken(userId, version, null);
+    public String createRefreshToken(Long userId, String sessionId) {
+        return createRefreshToken(userId, sessionId, null);
     }
 
-    public String createRefreshToken(Long userId, int version, String username) {
+    public String createRefreshToken(Long userId, String sessionId, String username) {
         String jti = UUID.randomUUID().toString();
         Date now = new Date();
         Date exp = new Date(now.getTime() + refreshExpireSeconds * 1000);
@@ -74,7 +69,7 @@ public class JwtTokenService {
             .issuer(issuer)
             .subject(String.valueOf(userId))
             .id(jti)
-            .claim("ver", version)
+            .claim("sid", sessionId)
             .claim("typ", "refresh")
             .issuedAt(now)
             .expiration(exp)
@@ -82,24 +77,18 @@ public class JwtTokenService {
         if (StringUtils.hasText(username)) {
             builder.claim("uname", username);
         }
-        String token = builder.compact();
-        redisTemplate.opsForValue().set("auth:refresh:" + token, String.valueOf(userId), Duration.ofSeconds(refreshExpireSeconds));
-        return token;
+        return builder.compact();
     }
 
     public Claims parse(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }
 
-    public boolean existsRefreshToken(String refreshToken) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey("auth:refresh:" + refreshToken));
-    }
-
-    public void removeRefreshToken(String refreshToken) {
-        redisTemplate.delete("auth:refresh:" + refreshToken);
-    }
-
     public long getAccessExpireSeconds() {
         return accessExpireSeconds;
+    }
+
+    public long getRefreshExpireSeconds() {
+        return refreshExpireSeconds;
     }
 }

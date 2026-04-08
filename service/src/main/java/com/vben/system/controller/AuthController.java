@@ -34,7 +34,11 @@ public class AuthController {
     @Operation(summary = "账号密码登录", description = "完成验证码校验、登录失败次数校验并签发 Access/Refresh Token")
     @PostMapping("/login")
     public ApiResponse<TokenResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpServletRequest) {
-        return ApiResponse.ok(authService.login(request, requestIpResolver.resolve(httpServletRequest)));
+        return ApiResponse.ok(authService.login(
+                request,
+                requestIpResolver.resolve(httpServletRequest),
+                httpServletRequest.getHeader("User-Agent")
+        ));
     }
 
     @Operation(summary = "刷新访问令牌", description = "使用 Refresh Token 换取新的 Access Token 与 Refresh Token")
@@ -50,7 +54,7 @@ public class AuthController {
         return ApiResponse.ok(authService.refresh(refreshToken));
     }
 
-    @Operation(summary = "退出登录", description = "将当前 Access Token 加入黑名单并移除 Refresh Token")
+    @Operation(summary = "退出登录", description = "删除当前登录会话并移除对应 Refresh Token")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @RequestHeader(value = "Authorization", required = false) String authorization,

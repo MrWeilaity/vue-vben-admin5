@@ -52,13 +52,13 @@ final class SecurityUtils {
             return currentUser;
         }
         if (principal instanceof UserDetails userDetails && StringUtils.hasText(userDetails.getUsername())) {
-            return new CurrentUserPrincipal(null, userDetails.getUsername());
+            return new CurrentUserPrincipal(null, userDetails.getUsername(), null);
         }
         if (principal instanceof Principal namedPrincipal && StringUtils.hasText(namedPrincipal.getName())) {
-            return new CurrentUserPrincipal(null, namedPrincipal.getName());
+            return new CurrentUserPrincipal(null, namedPrincipal.getName(), null);
         }
         if (principal instanceof String username && StringUtils.hasText(username) && !"anonymousUser".equals(username)) {
-            return new CurrentUserPrincipal(null, username);
+            return new CurrentUserPrincipal(null, username, null);
         }
         throw new UnauthorizedException("未登录或登录已过期");
     }
@@ -83,5 +83,16 @@ final class SecurityUtils {
             throw new UnauthorizedException("当前登录用户缺少 userId 信息");
         }
         return userId;
+    }
+
+    /**
+     * 获取当前登录会话 ID。
+     */
+    public static String getSessionId() {
+        String sessionId = getUser().sessionId();
+        if (!StringUtils.hasText(sessionId)) {
+            throw new UnauthorizedException("当前登录用户缺少 sessionId 信息");
+        }
+        return sessionId;
     }
 }

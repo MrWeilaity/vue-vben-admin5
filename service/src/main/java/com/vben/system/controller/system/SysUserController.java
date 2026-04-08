@@ -5,6 +5,7 @@ import com.vben.system.common.PageResult;
 import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.user.UserCreateRequest;
 import com.vben.system.dto.system.user.UserResponse;
+import com.vben.system.dto.system.user.UserSessionResponse;
 import com.vben.system.dto.system.user.UserUpdateRequest;
 import com.vben.system.dto.user.UserPasswordResetRequest;
 import com.vben.system.service.system.impl.SysUserService;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 /**
@@ -106,6 +109,21 @@ public class SysUserController {
     @PreAuthorize("hasAuthority('System:User:Edit')")
     public ApiResponse<Void> forceOffline(@PathVariable Long id) {
         userService.forceOffline(id);
+        return ApiResponse.ok(null);
+    }
+
+    @Operation(summary = "查询用户在线设备")
+    @GetMapping("/{id}/sessions")
+    @PreAuthorize("hasAuthority('System:User:List')")
+    public ApiResponse<List<UserSessionResponse>> sessions(@PathVariable Long id) {
+        return ApiResponse.ok(userService.listSessions(id));
+    }
+
+    @Operation(summary = "下线指定用户设备")
+    @PostMapping("/{id}/sessions/{sessionId}/offline")
+    @PreAuthorize("hasAuthority('System:User:Edit')")
+    public ApiResponse<Void> offlineSession(@PathVariable Long id, @PathVariable String sessionId) {
+        userService.offlineSession(id, sessionId);
         return ApiResponse.ok(null);
     }
 }

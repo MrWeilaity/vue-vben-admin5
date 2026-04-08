@@ -7,9 +7,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.vben.system.common.exception.BadRequestException;
 import com.vben.system.common.exception.ForbiddenException;
 import com.vben.system.common.exception.RefreshTokenExpiredException;
-import com.vben.system.common.exception.UnauthorizedException;
 import com.vben.system.dto.auth.LoginRequest;
 import com.vben.system.dto.auth.TokenResponse;
+import com.vben.system.dto.system.user.UserSessionResponse;
 import com.vben.system.entity.SysUser;
 import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.security.JwtTokenService;
@@ -23,7 +23,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * AuthService 组件说明。
@@ -43,12 +42,10 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
     private final LoginUserService loginUserService;
     private final PermissionCodeService permissionCodeService;
+    private final AuthSessionService authSessionService;
 
-    public TokenResponse login(LoginRequest request, String ip) {
+    public TokenResponse login(LoginRequest request, String ip, String userAgent) {
         String captchaRedisKey = null;
-        if (StringUtils.hasText(request.getCaptchaKey())) {
-            captchaRedisKey = "auth:captcha:" + request.getCaptchaKey();
-        }
         try {
             String failKey = "auth:fail:" + request.getUsername();
             String failedCount = redisTemplate.opsForValue().get(failKey);
@@ -56,11 +53,14 @@ public class AuthService {
                 throw new ForbiddenException("登录失败次数过多，请稍后再试");
             }
 
-            if (StringUtils.hasText(request.getCaptchaKey()) || StringUtils.hasText(request.getCaptchaCode())) {
-                String captcha = redisTemplate.opsForValue().get("auth:captcha:" + request.getCaptchaKey());
-                if (captcha == null || !captcha.equalsIgnoreCase(request.getCaptchaCode())) {
-                    throw new BadRequestException("验证码错误");
-                }
+            if (!StringUtils.hasText(request.getCaptchaKey()) || !StringUtils.hasText(request.getCaptchaCode())) {
+                throw new BadRequestException("验证码或验证码Key不能为空");
+            }
+
+            captchaRedisKey = "auth:captcha:" + request.getCaptchaKey();
+            String captcha = redisTemplate.opsForValue().get(captchaRedisKey);
+            if (captcha == null || !captcha.equalsIgnoreCase(request.getCaptchaCode())) {
+                throw new BadRequestException("验证码错误");
             }
 
             SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.getUsername()));
@@ -74,14 +74,19 @@ public class AuthService {
             }
 
             redisTemplate.delete(failKey);
-            String versionKey = "auth:token:version:" + user.getId();
-            if (!redisTemplate.hasKey(versionKey)) {
-                redisTemplate.opsForValue().set(versionKey, "1");
-            }
-            int version = Integer.parseInt(Objects.requireNonNull(redisTemplate.opsForValue().get(versionKey)));
-            String accessToken = tokenService.createAccessToken(user.getId(), version, user.getUsername());
-            String refreshToken = tokenService.createRefreshToken(user.getId(), version, user.getUsername());
-            redisTemplate.opsForHash().put("auth:session:" + user.getId(), "loginIp", ip);
+            Duration accessTtl = Duration.ofSeconds(tokenService.getAccessExpireSeconds());
+            Duration refreshTtl = Duration.ofSeconds(tokenService.getRefreshExpireSeconds());
+            AuthSessionService.SessionRecord session = authSessionService.createSession(
+                    user.getId(),
+                    user.getUsername(),
+                    ip,
+                    userAgent,
+                    accessTtl,
+                    refreshTtl
+            );
+            String accessToken = tokenService.createAccessToken(user.getId(), session.getSessionId(), user.getUsername());
+            String refreshToken = tokenService.createRefreshToken(user.getId(), session.getSessionId(), user.getUsername());
+            authSessionService.bindRefreshToken(session.getSessionId(), refreshToken, refreshTtl);
             return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
         } finally {
             if (captchaRedisKey != null) {
@@ -94,59 +99,74 @@ public class AuthService {
         if (!StringUtils.hasText(refreshToken)) {
             throw new BadRequestException("refresh token 不能为空");
         }
-        if (!tokenService.existsRefreshToken(refreshToken)) {
-            throw new RefreshTokenExpiredException("refresh token 已失效");
-        }
-        var claims = tokenService.parse(refreshToken);
+        var claims = parseRefreshClaims(refreshToken);
         String tokenType = claims.get("typ", String.class);
-        // 兼容历史 refresh token：旧 token 不带 typ，允许在过渡期继续使用
-        if (StringUtils.hasText(tokenType) && !"refresh".equals(tokenType)) {
+        if (!"refresh".equals(tokenType)) {
             throw new BadRequestException("token 类型错误");
         }
         Long userId = Long.valueOf(claims.getSubject());
-        int version = claims.get("ver", Integer.class);
-        String username = claims.get("uname", String.class);
+        String sessionId = claims.get("sid", String.class);
+        if (!StringUtils.hasText(sessionId)) {
+            throw new RefreshTokenExpiredException("refresh token 已失效");
+        }
+        if (!authSessionService.isRefreshTokenBound(refreshToken, sessionId)) {
+            throw new RefreshTokenExpiredException("refresh token 已失效");
+        }
+        AuthSessionService.SessionRecord session = authSessionService.getSession(sessionId);
+        if (session == null || !userId.equals(session.getUserId())) {
+            throw new RefreshTokenExpiredException("refresh token 已失效");
+        }
         SysUser user = userMapper.selectById(userId);
         if (user == null) {
-            tokenService.removeRefreshToken(refreshToken);
+            authSessionService.deleteSession(sessionId);
             throw new ForbiddenException("用户不存在或已被删除");
         }
         if (user.getStatus() == null || user.getStatus() != 1) {
-            tokenService.removeRefreshToken(refreshToken);
+            authSessionService.deleteSession(sessionId);
             throw new ForbiddenException("账号已被禁用，请联系管理员");
         }
-        String versionKey = "auth:token:version:" + userId;
-        String currentVersion = redisTemplate.opsForValue().get(versionKey);
-        int latestVersion = Integer.parseInt(currentVersion == null ? "1" : currentVersion);
-        if (version != latestVersion) {
-            tokenService.removeRefreshToken(refreshToken);
-            throw new RefreshTokenExpiredException("refresh token 已失效");
-        }
-        if (!StringUtils.hasText(username)) {
-            username = user.getUsername();
-        }
-        String accessToken = tokenService.createAccessToken(userId, version, username);
-        String newRefreshToken = tokenService.createRefreshToken(userId, version, username);
-        tokenService.removeRefreshToken(refreshToken);
+        String accessToken = tokenService.createAccessToken(userId, sessionId, user.getUsername());
+        String newRefreshToken = tokenService.createRefreshToken(userId, sessionId, user.getUsername());
+        authSessionService.refreshSession(
+                sessionId,
+                newRefreshToken,
+                Duration.ofSeconds(tokenService.getAccessExpireSeconds()),
+                Duration.ofSeconds(tokenService.getRefreshExpireSeconds())
+        );
         return TokenResponse.builder().accessToken(accessToken).refreshToken(newRefreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
     }
 
     public void logout(String accessToken, String refreshToken) {
         try {
             var claims = tokenService.parse(accessToken);
-            redisTemplate.opsForValue().set("auth:blacklist:" + claims.getId(), "1", Duration.ofHours(1));
+            String sessionId = claims.get("sid", String.class);
+            if (StringUtils.hasText(sessionId)) {
+                authSessionService.deleteSession(sessionId);
+                return;
+            }
         } catch (Exception ignored) {
         }
         if (StringUtils.hasText(refreshToken)) {
-            tokenService.removeRefreshToken(refreshToken);
+            try {
+                String sessionId = tokenService.parse(refreshToken).get("sid", String.class);
+                if (authSessionService.isRefreshTokenBound(refreshToken, sessionId) && StringUtils.hasText(sessionId)) {
+                    authSessionService.deleteSession(sessionId);
+                }
+            } catch (Exception ignored) {
+            }
         }
     }
 
     public void forceOffline(Long userId) {
-        String versionKey = "auth:token:version:" + userId;
-        String currentVersion = redisTemplate.opsForValue().get(versionKey);
-        int version = Integer.parseInt(currentVersion == null ? "1" : currentVersion);
-        redisTemplate.opsForValue().set(versionKey, String.valueOf(version + 1));
+        authSessionService.deleteUserSessions(userId);
+    }
+
+    public void forceOffline(Long userId, String sessionId) {
+        authSessionService.deleteUserSession(userId, sessionId);
+    }
+
+    public List<UserSessionResponse> listUserSessions(Long userId, String currentSessionId) {
+        return authSessionService.listUserSessions(userId, currentSessionId);
     }
 
     /**
@@ -180,5 +200,13 @@ public class AuthService {
     }
 
     public record CaptchaPayload(String captchaImageBase64, long expireSeconds) {
+    }
+
+    private io.jsonwebtoken.Claims parseRefreshClaims(String refreshToken) {
+        try {
+            return tokenService.parse(refreshToken);
+        } catch (Exception ex) {
+            throw new RefreshTokenExpiredException("refresh token 已失效");
+        }
     }
 }

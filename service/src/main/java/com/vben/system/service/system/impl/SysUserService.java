@@ -9,6 +9,7 @@ import com.vben.system.common.exception.ServiceException;
 import com.vben.system.dto.params.UserParams;
 import com.vben.system.dto.system.user.UserCreateRequest;
 import com.vben.system.dto.system.user.UserResponse;
+import com.vben.system.dto.system.user.UserSessionResponse;
 import com.vben.system.dto.system.user.UserUpdateRequest;
 import com.vben.system.dto.user.UserPasswordResetRequest;
 import com.vben.system.entity.SysDept;
@@ -21,6 +22,7 @@ import com.vben.system.mapper.SysUserPostMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.service.AuthService;
 import com.vben.system.service.system.ISysUserService;
+import com.vben.system.security.LoginUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -46,6 +48,7 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     private final AuthService authService;
     private final SysDeptMapper deptMapper;
     private final PasswordEncoder passwordEncoder;
+    private final LoginUserService loginUserService;
     @Value("${system.security.protected-user-id:1}")
     private Long protectedUserId;
 
@@ -153,7 +156,25 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      * @param id 用户 ID
      */
     public void forceOffline(Long id) {
+        assertUserExists(id);
         authService.forceOffline(id);
+    }
+
+    public List<UserSessionResponse> listSessions(Long id) {
+        SysUser user = assertUserExists(id);
+        String currentSessionId = null;
+        try {
+            if (id.equals(loginUserService.getCurrentUserId())) {
+                currentSessionId = loginUserService.getCurrentSessionId();
+            }
+        } catch (Exception ignored) {
+        }
+        return authService.listUserSessions(user.getId(), currentSessionId);
+    }
+
+    public void offlineSession(Long id, String sessionId) {
+        assertUserExists(id);
+        authService.forceOffline(id, sessionId);
     }
 
     public Map<Long, List<Long>> getRoleIdsByUserIds(List<Long> userIds) {
@@ -241,13 +262,18 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      * @param request 重置密码请求体
      */
     public void resetPassword(Long id, UserPasswordResetRequest request) {
-        SysUser user = userMapper.selectById(id);
-        if (user == null) {
-            throw new ServiceException("用户不存在或已被删除");
-        }
+        assertUserExists(id);
         lambdaUpdate().eq(SysUser::getId, id)
                 .set(SysUser::getPassword, passwordEncoder.encode(request.getNewPassword()))
                 .update();
         authService.forceOffline(id);
+    }
+
+    private SysUser assertUserExists(Long id) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) {
+            throw new ServiceException("用户不存在或已被删除");
+        }
+        return user;
     }
 }
