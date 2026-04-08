@@ -7,6 +7,8 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>vben-service</name>
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>21</java.version>
         <spring-boot.version>3.5.0</spring-boot.version>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
@@ -153,6 +155,7 @@
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
         </plugins>
