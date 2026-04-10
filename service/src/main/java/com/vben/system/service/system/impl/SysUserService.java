@@ -111,6 +111,7 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      */
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, UserUpdateRequest updateUser) {
+        SysUser existingUser = assertUserExists(id);
         lambdaUpdate().eq(SysUser::getId, id)
                 .set(updateUser.getNickname()!=null, SysUser::getNickname, updateUser.getNickname())
                 .set(updateUser.getDeptId() != null, SysUser::getDeptId, updateUser.getDeptId())
@@ -127,6 +128,10 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         if (updateUser.getPostIds() != null) {
             List<Long> postIds = updateUser.getPostIds();
             saveUserPosts(id, postIds);
+        }
+        if (updateUser.getStatus() != null && updateUser.getStatus() != 1
+                && (existingUser.getStatus() == null || existingUser.getStatus() == 1)) {
+            authService.forceOffline(id);
         }
     }
 

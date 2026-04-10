@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.vben.system.entity.SysUser;
+import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.service.AuthSessionService;
 
 import java.io.IOException;
@@ -37,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenService tokenService;
     private final PermissionCodeService permissionCodeService;
     private final AuthSessionService authSessionService;
+    private final SysUserMapper userMapper;
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
@@ -87,6 +90,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (!Objects.equals(userId, session.getUserId())) {
                     log.warn("JWT用户与Redis会话用户不一致，已拒绝本次认证: tokenUserId={}, sessionUserId={}, sessionId={}",
                             userId, session.getUserId(), sessionId);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                SysUser user = userMapper.selectById(userId);
+                if (user == null) {
+                    log.warn("JWT对应用户不存在，已清理全部登录会话: userId={}, sessionId={}", userId, sessionId);
+                    authSessionService.deleteUserSessions(userId);
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                if (user.getStatus() == null || user.getStatus() != 1) {
+                    log.warn("JWT对应用户已被禁用，已清理全部登录会话: userId={}, sessionId={}", userId, sessionId);
+                    authSessionService.deleteUserSessions(userId);
+                    SecurityContextHolder.clearContext();
                     filterChain.doFilter(request, response);
                     return;
                 }

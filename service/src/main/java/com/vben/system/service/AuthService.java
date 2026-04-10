@@ -118,11 +118,11 @@ public class AuthService {
         }
         SysUser user = userMapper.selectById(userId);
         if (user == null) {
-            authSessionService.deleteSession(sessionId);
+            authSessionService.deleteUserSessions(userId);
             throw new ForbiddenException("用户不存在或已被删除");
         }
         if (user.getStatus() == null || user.getStatus() != 1) {
-            authSessionService.deleteSession(sessionId);
+            authSessionService.deleteUserSessions(userId);
             throw new ForbiddenException("账号已被禁用，请联系管理员");
         }
         String accessToken = tokenService.createAccessToken(userId, sessionId, user.getUsername());
