@@ -5,19 +5,17 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 在线设备会话响应。
- */
 @Data
 @Builder
-public class UserSessionResponse {
+public class OnlineUserResponse {
     private String sessionId;
     private Long userId;
+    private String username;
+    private String deptName;
     private String loginIp;
     private String loginAddress;
     private String browser;
     private String os;
-    private String userAgent;
     private String deviceType;
     private LocalDateTime loginTime;
     private LocalDateTime lastAccessTime;
