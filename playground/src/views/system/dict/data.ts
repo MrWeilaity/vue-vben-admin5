@@ -88,6 +88,7 @@ export function useDataFormSchema(): VbenFormSchema[] {
       defaultValue: 0,
       fieldName: 'sortOrder',
       label: $t('system.dict.sortOrder'),
+      rules: 'required',
     },
     {
       component: 'RadioGroup',
