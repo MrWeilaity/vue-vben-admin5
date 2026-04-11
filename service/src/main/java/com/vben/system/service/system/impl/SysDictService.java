@@ -101,6 +101,7 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
     @Transactional(rollbackFor = Exception.class)
     public void updateType(Long id, DictTypeUpdateRequest request) {
         SysDictType type = requireType(id);
+        String oldCode = type.getCode();
         String code = normalizeCode(request.getCode());
         ensureTypeCodeUnique(code, id);
         type.setName(normalizeName(request.getName()));
@@ -116,7 +117,7 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         updateEntity.setTypeCode(code);
         dictDataMapper.update(updateEntity, new LambdaQueryWrapper<SysDictData>().eq(SysDictData::getTypeId, id));
         afterCommit(() -> {
-            syncTypeCache(type.getCode());
+            syncTypeCache(oldCode);
             syncTypeCache(code);
         });
     }
@@ -182,14 +183,18 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
     public List<DictDataResponse> dataByTypeCode(String typeCode, boolean onlyEnabled) {
         String normalized = normalizeCode(typeCode);
 
-        List<DictDataResponse> cached = getFromCache(normalized);
-        if (cached != null) {
-            return filterStatus(cached, onlyEnabled);
-        }
-
         SysDictType type = dictTypeMapper.selectOne(new LambdaQueryWrapper<SysDictType>().eq(SysDictType::getCode, normalized));
         if (type == null) {
             return Collections.emptyList();
+        }
+        if (type.getStatus() == null || type.getStatus() != 1) {
+            evictCache(normalized);
+            return Collections.emptyList();
+        }
+
+        List<DictDataResponse> cached = getFromCache(normalized);
+        if (cached != null) {
+            return filterStatus(cached, onlyEnabled);
         }
 
         List<DictDataResponse> items = dictDataMapper.selectList(
@@ -339,7 +344,8 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
 
     private void rebuildRedisCache() {
         List<SysDictType> allTypes = dictTypeMapper.selectList(new LambdaQueryWrapper<SysDictType>()
-                .eq(SysDictType::getCacheEnabled, 1));
+                .eq(SysDictType::getCacheEnabled, 1)
+                .eq(SysDictType::getStatus, 1));
         if (allTypes.isEmpty()) {
             return;
         }
@@ -364,7 +370,9 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         }
         SysDictType type = dictTypeMapper.selectOne(new LambdaQueryWrapper<SysDictType>()
                 .eq(SysDictType::getCode, typeCode));
-        if (type == null || type.getCacheEnabled() == null || type.getCacheEnabled() != 1) {
+        if (type == null
+                || type.getCacheEnabled() == null || type.getCacheEnabled() != 1
+                || type.getStatus() == null || type.getStatus() != 1) {
             evictCache(typeCode);
             return;
         }
