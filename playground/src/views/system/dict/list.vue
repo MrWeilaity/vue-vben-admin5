@@ -13,7 +13,6 @@ import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteDictType, getDictTypeList, refreshDictCache } from '#/api';
-import { clearDictCache } from '#/composables/use-dict';
 import { $t } from '#/locales';
 
 import { useTypeColumns } from './data';
@@ -80,7 +79,6 @@ function onActionClick(e: OnActionClickParams<SystemDictApi.DictType>) {
 
 async function onDelete(row: SystemDictApi.DictType) {
   await deleteDictType(row.id);
-  clearDictCache();
   message.success($t('ui.actionMessage.deleteSuccess', [row.name]));
   gridApi.query();
 }
@@ -91,7 +89,6 @@ function onCreate() {
 
 async function onRefreshCache() {
   await refreshDictCache();
-  clearDictCache();
   message.success($t('system.dict.refreshSuccess'));
 }
 </script>

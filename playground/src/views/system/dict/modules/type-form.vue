@@ -7,7 +7,6 @@ import { useVbenDrawer } from '@vben/common-ui';
 
 import { useVbenForm } from '#/adapter/form';
 import { createDictType, updateDictType } from '#/api';
-import { clearDictCache } from '#/composables/use-dict';
 import { $t } from '#/locales';
 
 import { useTypeFormSchema } from '../data';
@@ -32,7 +31,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
       : createDictType(values as any)
     )
       .then(() => {
-        clearDictCache();
         emits('success');
         drawerApi.close();
       })

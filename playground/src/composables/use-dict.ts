@@ -47,8 +47,3 @@ export async function preloadDict(typeCodes: string[]) {
   }
   await getDictByTypeCodes(typeCodes, true);
 }
-
-/** 清理前端字典内存缓存（兼容保留，无实际缓存可清理）。 */
-export function clearDictCache(_typeCode?: string) {
-  // no-op: 前端不再维护字典内存缓存
-}
