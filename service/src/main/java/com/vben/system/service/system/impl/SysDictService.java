@@ -339,7 +339,11 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         if (StrUtil.isBlank(typeCode)) {
             return;
         }
-        redisTemplate.delete(cacheKey(typeCode));
+        try {
+            redisTemplate.delete(cacheKey(typeCode));
+        } catch (Exception e) {
+            log.warn("删除字典缓存失败，typeCode={}", typeCode, e);
+        }
     }
 
     private void rebuildRedisCache() {
