@@ -167,8 +167,10 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
     @Override
     public PageResult<DictDataResponse> dataList(DictDataParams params) {
         Page<SysDictData> page = new Page<>(params.getPage(), params.getPageSize());
+        String typeCode = params.getTypeCode();
+        String normalizedTypeCode = StrUtil.isBlank(typeCode) ? null : normalizeCode(typeCode);
         LambdaQueryWrapper<SysDictData> wrapper = new LambdaQueryWrapper<SysDictData>()
-                .eq(StrUtil.isNotBlank(params.getTypeCode()), SysDictData::getTypeCode, normalizeCode(params.getTypeCode()))
+                .eq(normalizedTypeCode != null, SysDictData::getTypeCode, normalizedTypeCode)
                 .like(StrUtil.isNotBlank(params.getLabel()), SysDictData::getLabel, params.getLabel())
                 .like(StrUtil.isNotBlank(params.getValue()), SysDictData::getValue, params.getValue())
                 .eq(params.getStatus() != null, SysDictData::getStatus, params.getStatus())
