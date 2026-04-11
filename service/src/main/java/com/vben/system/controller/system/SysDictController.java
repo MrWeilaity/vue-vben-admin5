@@ -68,7 +68,7 @@ public class SysDictController {
     @Operation(summary = "更新字典类型状态")
     @PutMapping("/type/status/{id}")
     @PreAuthorize("hasAuthority('System:Dict:Edit')")
-    public ApiResponse<Void> updateTypeStatus(@PathVariable Long id, @Valid @RequestBody DictTypeUpdateRequest request) {
+    public ApiResponse<Void> updateTypeStatus(@PathVariable Long id, @Valid @RequestBody DictStatusUpdateRequest request) {
         dictService.updateTypeStatus(id, request.getStatus());
         return ApiResponse.ok(null);
     }
@@ -107,7 +107,7 @@ public class SysDictController {
     @Operation(summary = "更新字典项状态")
     @PutMapping("/data/status/{id}")
     @PreAuthorize("hasAuthority('System:Dict:Edit')")
-    public ApiResponse<Void> updateDataStatus(@PathVariable Long id, @Valid @RequestBody DictDataUpdateRequest request) {
+    public ApiResponse<Void> updateDataStatus(@PathVariable Long id, @Valid @RequestBody DictStatusUpdateRequest request) {
         dictService.updateDataStatus(id, request.getStatus());
         return ApiResponse.ok(null);
     }
