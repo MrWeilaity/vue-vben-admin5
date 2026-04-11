@@ -101,10 +101,10 @@ public class AuthService {
             String accessToken = tokenService.createAccessToken(user.getId(), session.getSessionId(), user.getUsername());
             String refreshToken = tokenService.createRefreshToken(user.getId(), session.getSessionId(), user.getUsername());
             authSessionService.bindRefreshToken(session.getSessionId(), refreshToken, refreshTtl);
-            success = true;
             user.setLastLoginIp(ip);
             user.setLastLoginTime(java.time.LocalDateTime.now());
             userMapper.updateById(user);
+            success = true;
             return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
         } catch (Exception ex) {
             operationMsg = ex.getMessage();
