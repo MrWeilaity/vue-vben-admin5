@@ -114,5 +114,35 @@
     "status": "Status",
     "title": "User Management",
     "username": "Username"
+  },
+  "loginLog": {
+    "title": "Login Log",
+    "list": "Login Log List",
+    "username": "Username",
+    "ip": "Login IP",
+    "address": "Login Location",
+    "browser": "Browser",
+    "os": "OS",
+    "operationMsg": "Operation Message",
+    "loginTime": "Login Time"
+  },
+  "online": {
+    "title": "Online Users",
+    "list": "Online User List",
+    "sessionId": "Session ID",
+    "username": "Username",
+    "deptName": "Department",
+    "loginIp": "Login IP",
+    "loginAddress": "Login Location",
+    "browser": "Browser",
+    "os": "OS",
+    "deviceType": "Device Type",
+    "loginTime": "Login Time",
+    "lastAccessTime": "Last Access Time",
+    "expiresAt": "Session Expire Time",
+    "operation": "Operation",
+    "offline": "Offline",
+    "offlineSuccess": "Offline success",
+    "current": "Current Session"
   }
 }
