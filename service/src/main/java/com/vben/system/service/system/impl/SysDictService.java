@@ -399,12 +399,20 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    runnable.run();
+                    runAfterCommitSafely(runnable);
                 }
             });
             return;
         }
-        runnable.run();
+        runAfterCommitSafely(runnable);
+    }
+
+    private void runAfterCommitSafely(Runnable runnable) {
+        try {
+            runnable.run();
+        } catch (Exception e) {
+            log.warn("字典缓存提交后同步失败", e);
+        }
     }
 
     private void clearDefault(String typeCode, Long excludeId) {
