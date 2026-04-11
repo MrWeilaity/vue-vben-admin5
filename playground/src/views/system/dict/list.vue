@@ -80,6 +80,7 @@ function onActionClick(e: OnActionClickParams<SystemDictApi.DictType>) {
 
 async function onDelete(row: SystemDictApi.DictType) {
   await deleteDictType(row.id);
+  clearDictCache();
   message.success($t('ui.actionMessage.deleteSuccess', [row.name]));
   gridApi.query();
 }

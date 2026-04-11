@@ -7,6 +7,7 @@ import { useVbenDrawer } from '@vben/common-ui';
 
 import { useVbenForm } from '#/adapter/form';
 import { createDictData, updateDictData } from '#/api';
+import { clearDictCache } from '#/composables/use-dict';
 import { $t } from '#/locales';
 
 import { useDataFormSchema } from '../data';
@@ -35,6 +36,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       : createDictData({ ...values, typeCode: currentTypeCode.value } as any)
     )
       .then(() => {
+        clearDictCache(currentTypeCode.value);
         emits('success');
         drawerApi.close();
       })
