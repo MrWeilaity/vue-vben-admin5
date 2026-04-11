@@ -15,7 +15,10 @@ import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.security.JwtTokenService;
 import com.vben.system.security.LoginUserService;
 import com.vben.system.security.PermissionCodeService;
+import com.vben.system.service.system.ISysLoginLogService;
+import com.vben.system.service.system.IpLocationResolver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,7 @@ import java.util.List;
  * AuthService 组件说明。
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AuthService {
     private static final String CAPTCHA_CHAR_POOL = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -43,9 +47,14 @@ public class AuthService {
     private final LoginUserService loginUserService;
     private final PermissionCodeService permissionCodeService;
     private final AuthSessionService authSessionService;
+    private final ISysLoginLogService loginLogService;
+    private final IpLocationResolver ipLocationResolver;
 
     public TokenResponse login(LoginRequest request, String ip, String userAgent) {
         String captchaRedisKey = null;
+        String username = request.getUsername();
+        String operationMsg = "登录成功";
+        boolean success = false;
         try {
             String failKey = "auth:fail:" + request.getUsername();
             String failedCount = redisTemplate.opsForValue().get(failKey);
@@ -76,19 +85,36 @@ public class AuthService {
             redisTemplate.delete(failKey);
             Duration accessTtl = Duration.ofSeconds(tokenService.getAccessExpireSeconds());
             Duration refreshTtl = Duration.ofSeconds(tokenService.getRefreshExpireSeconds());
+            String loginAddress = resolveLoginAddress(ip);
+            UserAgentInfo userAgentInfo = parseUserAgent(userAgent);
             AuthSessionService.SessionRecord session = authSessionService.createSession(
                     user.getId(),
                     user.getUsername(),
                     ip,
+                    loginAddress,
                     userAgent,
+                    userAgentInfo.browser(),
+                    userAgentInfo.os(),
                     accessTtl,
                     refreshTtl
             );
             String accessToken = tokenService.createAccessToken(user.getId(), session.getSessionId(), user.getUsername());
             String refreshToken = tokenService.createRefreshToken(user.getId(), session.getSessionId(), user.getUsername());
             authSessionService.bindRefreshToken(session.getSessionId(), refreshToken, refreshTtl);
+            user.setLastLoginIp(ip);
+            user.setLastLoginTime(java.time.LocalDateTime.now());
+            userMapper.updateById(user);
+            success = true;
             return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).expiresIn(tokenService.getAccessExpireSeconds()).build();
+        } catch (Exception ex) {
+            operationMsg = ex.getMessage();
+            throw ex;
         } finally {
+            try {
+                loginLogService.record(username, ip, userAgent, success, operationMsg);
+            } catch (Exception logException) {
+                log.warn("Failed to enqueue login log, username={}, ip={}, success={}", username, ip, success, logException);
+            }
             if (captchaRedisKey != null) {
                 redisTemplate.delete(captchaRedisKey);
             }
@@ -199,7 +225,49 @@ public class AuthService {
         return new CaptchaPayload(lineCaptcha.getImageBase64Data(), ttl.toSeconds());
     }
 
+
+    private String resolveLoginAddress(String ip) {
+        if (!StringUtils.hasText(ip)) {
+            return "未知";
+        }
+        if (isInnerIp(ip)) {
+            return "内网IP";
+        }
+        String addr = ipLocationResolver.resolve(ip);
+        return StringUtils.hasText(addr) ? addr : "未知";
+    }
+
+    private boolean isInnerIp(String ip) {
+        if (ip.startsWith("172.")) {
+            String[] segments = ip.split("\\.");
+            if (segments.length >= 2) {
+                try {
+                    int second = Integer.parseInt(segments[1]);
+                    if (second >= 16 && second <= 31) {
+                        return true;
+                    }
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return "127.0.0.1".equals(ip)
+                || "localhost".equalsIgnoreCase(ip)
+                || ip.startsWith("192.168.")
+                || ip.startsWith("10.")
+                || ip.startsWith("169.254.");
+    }
+
+    private UserAgentInfo parseUserAgent(String userAgent) {
+        eu.bitwalker.useragentutils.UserAgent parsed = eu.bitwalker.useragentutils.UserAgent.parseUserAgentString(userAgent);
+        String browser = parsed.getBrowser() == null ? "Unknown" : parsed.getBrowser().getGroup().getName();
+        String os = parsed.getOperatingSystem() == null ? "Unknown" : parsed.getOperatingSystem().getGroup().getName();
+        return new UserAgentInfo(browser, os);
+    }
+
     public record CaptchaPayload(String captchaImageBase64, long expireSeconds) {
+    }
+
+    private record UserAgentInfo(String browser, String os) {
     }
 
     private io.jsonwebtoken.Claims parseRefreshClaims(String refreshToken) {

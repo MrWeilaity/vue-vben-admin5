@@ -116,5 +116,35 @@
     "status": "状态",
     "title": "用户管理",
     "username": "用户名"
+  },
+  "loginLog": {
+    "title": "登录日志",
+    "list": "登录日志列表",
+    "username": "登录名",
+    "ip": "登录IP",
+    "address": "登录地点",
+    "browser": "浏览器",
+    "os": "操作系统",
+    "operationMsg": "操作信息",
+    "loginTime": "登录时间"
+  },
+  "online": {
+    "title": "在线用户",
+    "list": "在线用户列表",
+    "sessionId": "会话编号",
+    "username": "登录名称",
+    "deptName": "部门名称",
+    "loginIp": "登录IP",
+    "loginAddress": "登录地点",
+    "browser": "浏览器",
+    "os": "操作系统",
+    "deviceType": "设备类型",
+    "loginTime": "登录时间",
+    "lastAccessTime": "最后访问时间",
+    "expiresAt": "会话过期时间",
+    "operation": "操作",
+    "offline": "下线",
+    "offlineSuccess": "下线成功",
+    "current": "当前会话"
   }
 }

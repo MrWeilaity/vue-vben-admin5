@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -42,7 +44,10 @@ public class AuthSessionService {
             Long userId,
             String username,
             String loginIp,
+            String loginAddress,
             String userAgent,
+            String browser,
+            String os,
             Duration accessTtl,
             Duration refreshTtl
     ) {
@@ -52,7 +57,10 @@ public class AuthSessionService {
                 .userId(userId)
                 .username(username)
                 .loginIp(loginIp)
+                .loginAddress(loginAddress)
                 .userAgent(userAgent)
+                .browser(browser)
+                .os(os)
                 .deviceType(resolveDeviceType(userAgent))
                 .loginTime(now)
                 .lastAccessTime(now)
@@ -101,6 +109,9 @@ public class AuthSessionService {
                     .sessionId(session.getSessionId())
                     .userId(session.getUserId())
                     .loginIp(session.getLoginIp())
+                    .loginAddress(session.getLoginAddress())
+                    .browser(session.getBrowser())
+                    .os(session.getOs())
                     .userAgent(session.getUserAgent())
                     .deviceType(session.getDeviceType())
                     .loginTime(session.getLoginTime())
@@ -111,6 +122,41 @@ public class AuthSessionService {
         }
         return responses.stream()
                 .sorted(Comparator.comparing(UserSessionResponse::getLoginTime, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+    }
+
+
+    public List<SessionRecord> listAllSessions() {
+        Set<String> userSessionKeys = new LinkedHashSet<>();
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(USER_SESSIONS_KEY_PREFIX + "*")
+                .count(200)
+                .build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                userSessionKeys.add(cursor.next());
+            }
+        }
+        if (userSessionKeys.isEmpty()) {
+            return List.of();
+        }
+        List<SessionRecord> records = new ArrayList<>();
+        for (String userSessionKey : userSessionKeys) {
+            Set<String> sessionIds = redisTemplate.opsForSet().members(userSessionKey);
+            if (sessionIds == null || sessionIds.isEmpty()) {
+                continue;
+            }
+            for (String sessionId : new LinkedHashSet<>(sessionIds)) {
+                SessionRecord session = getSession(sessionId);
+                if (session == null) {
+                    redisTemplate.opsForSet().remove(userSessionKey, sessionId);
+                    continue;
+                }
+                records.add(session);
+            }
+        }
+        return records.stream()
+                .sorted(Comparator.comparing(SessionRecord::getLoginTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
@@ -250,7 +296,10 @@ public class AuthSessionService {
         private Long userId;
         private String username;
         private String loginIp;
+        private String loginAddress;
         private String userAgent;
+        private String browser;
+        private String os;
         private String deviceType;
         private LocalDateTime loginTime;
         private LocalDateTime lastAccessTime;
