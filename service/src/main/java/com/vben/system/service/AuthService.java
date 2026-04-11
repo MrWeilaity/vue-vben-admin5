@@ -18,6 +18,7 @@ import com.vben.system.security.PermissionCodeService;
 import com.vben.system.service.system.ISysLoginLogService;
 import com.vben.system.service.system.IpLocationResolver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ import java.util.List;
  * AuthService 组件说明。
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AuthService {
     private static final String CAPTCHA_CHAR_POOL = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -108,7 +110,11 @@ public class AuthService {
             operationMsg = ex.getMessage();
             throw ex;
         } finally {
-            loginLogService.record(username, ip, userAgent, success, operationMsg);
+            try {
+                loginLogService.record(username, ip, userAgent, success, operationMsg);
+            } catch (Exception logException) {
+                log.warn("Failed to enqueue login log, username={}, ip={}, success={}", username, ip, success, logException);
+            }
             if (captchaRedisKey != null) {
                 redisTemplate.delete(captchaRedisKey);
             }
