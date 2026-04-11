@@ -146,5 +146,33 @@
     "offline": "下线",
     "offlineSuccess": "下线成功",
     "current": "当前会话"
+  },
+  "dict": {
+    "title": "字典管理",
+    "name": "字典",
+    "dataName": "字典项",
+    "typeList": "字典类型列表",
+    "dataList": "字典项列表",
+    "typeName": "字典名称",
+    "typeCode": "字典编码",
+    "typeCodeHelp": "建议采用业务域_语义命名，如 order_status。修改编码会同步更新字典项并刷新缓存。",
+    "status": "状态",
+    "cacheEnabled": "缓存",
+    "cacheEnabledHelp": "开启后字典会写入 Redis 与本地缓存，适合高频读取场景。",
+    "label": "字典标签",
+    "value": "字典值",
+    "isDefault": "默认项",
+    "defaultHelp": "同一字典类型建议仅保留一个默认项。",
+    "tagType": "标签类型",
+    "tagTypeHelp": "用于表格状态/标签回显颜色。",
+    "tagClass": "标签样式类",
+    "cssStyle": "扩展样式",
+    "sortOrder": "排序",
+    "remark": "备注",
+    "operation": "操作",
+    "refreshCache": "刷新缓存",
+    "refreshSuccess": "字典缓存刷新成功",
+    "selectTypeFirst": "请先选择一个字典类型",
+    "manageItems": "管理字典项"
   }
 }

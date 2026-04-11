@@ -144,5 +144,33 @@
     "offline": "Offline",
     "offlineSuccess": "Offline success",
     "current": "Current Session"
+  },
+  "dict": {
+    "title": "Dictionary",
+    "name": "Dictionary",
+    "dataName": "Dictionary Item",
+    "typeList": "Dictionary Type List",
+    "dataList": "Dictionary Data List",
+    "typeName": "Type Name",
+    "typeCode": "Type Code",
+    "typeCodeHelp": "Use business_semantic format such as order_status. Updating code syncs items and clears cache.",
+    "status": "Status",
+    "cacheEnabled": "Cache",
+    "cacheEnabledHelp": "When enabled, dictionary is cached in Redis and local memory for high-frequency reads.",
+    "label": "Label",
+    "value": "Value",
+    "isDefault": "Default",
+    "defaultHelp": "It is recommended to keep only one default item per type.",
+    "tagType": "Tag Type",
+    "tagTypeHelp": "Used for status/tag color rendering in UI.",
+    "tagClass": "Tag Class",
+    "cssStyle": "CSS Style",
+    "sortOrder": "Sort",
+    "remark": "Remark",
+    "operation": "Operation",
+    "refreshCache": "Refresh Cache",
+    "refreshSuccess": "Dictionary cache refreshed",
+    "selectTypeFirst": "Please select a dictionary type first",
+    "manageItems": "Manage Items"
   }
 }
