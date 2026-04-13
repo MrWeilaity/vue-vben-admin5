@@ -16,9 +16,7 @@ public class DictTypeResponse {
     private String name;
     private String code;
     private Integer status;
-    private Integer cacheEnabled;
     private Integer builtIn;
-    private Integer sortOrder;
     private String remark;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

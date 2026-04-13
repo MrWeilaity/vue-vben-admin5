@@ -27,8 +27,6 @@ public class SysDictData {
     private String value;
     /** 状态：1启用，0停用。 */
     private Integer status;
-    /** 是否默认：1是，0否。 */
-    private Integer isDefault;
     /** 排序值。 */
     private Integer sortOrder;
     /** 标签类型。 */

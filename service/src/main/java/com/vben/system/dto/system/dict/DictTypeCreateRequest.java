@@ -22,14 +22,6 @@ public class DictTypeCreateRequest {
     @Min(value = 0, message = "状态值不合法")
     @Max(value = 1, message = "状态值不合法")
     private Integer status;
-    /** 是否缓存。 */
-    @NotNull(message = "缓存开关不能为空")
-    @Min(value = 0, message = "缓存开关值不合法")
-    @Max(value = 1, message = "缓存开关值不合法")
-    private Integer cacheEnabled;
-    /** 排序。 */
-    @NotNull(message = "排序不能为空")
-    private Integer sortOrder;
     /** 备注。 */
     private String remark;
 }

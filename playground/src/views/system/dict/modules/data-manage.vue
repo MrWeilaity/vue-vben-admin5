@@ -5,7 +5,7 @@ import type {
 } from '#/adapter/vxe-table';
 import type { SystemDictApi } from '#/api';
 
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 import { useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
@@ -28,11 +28,12 @@ const [DataFormDrawer, dataFormDrawerApi] = useVbenDrawer({
 });
 
 const [Drawer, drawerApi] = useVbenDrawer({
-  onOpenChange(isOpen) {
+  async onOpenChange(isOpen) {
     if (!isOpen) return;
     const data = drawerApi.getData<SystemDictApi.DictType>();
     typeCode.value = data?.code ?? '';
     typeName.value = data?.name ?? '';
+    await nextTick();
     gridApi.query();
   },
 });
@@ -106,7 +107,7 @@ function onCreate() {
 </script>
 
 <template>
-  <Drawer :title="drawerTitle" class="w-[80vw]">
+  <Drawer :title="drawerTitle" class="w-[40vw]">
     <DataFormDrawer @success="gridApi.query" />
     <Grid :table-title="$t('system.dict.dataList')">
       <template #toolbar-tools>

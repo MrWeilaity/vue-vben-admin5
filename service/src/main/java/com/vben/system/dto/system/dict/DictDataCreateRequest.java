@@ -27,11 +27,6 @@ public class DictDataCreateRequest {
     @Min(value = 0, message = "状态值不合法")
     @Max(value = 1, message = "状态值不合法")
     private Integer status;
-    /** 是否默认。 */
-    @NotNull(message = "默认值标记不能为空")
-    @Min(value = 0, message = "默认值标记不合法")
-    @Max(value = 1, message = "默认值标记不合法")
-    private Integer isDefault;
     /** 排序。 */
     @NotNull(message = "排序不能为空")
     private Integer sortOrder;

@@ -5,13 +5,11 @@ import { requestClient } from '#/api/request';
 export namespace SystemDictApi {
   export interface DictType {
     builtIn?: 0 | 1;
-    cacheEnabled: 0 | 1;
     code: string;
     createTime?: string;
     id: number;
     name: string;
     remark?: string;
-    sortOrder: number;
     status: 0 | 1;
   }
 
@@ -20,7 +18,6 @@ export namespace SystemDictApi {
     cssStyle?: string;
     extJson?: Record<string, any>;
     id: number;
-    isDefault: 0 | 1;
     label: string;
     remark?: string;
     sortOrder: number;

@@ -19,7 +19,6 @@ public class DictDataResponse {
     private String label;
     private String value;
     private Integer status;
-    private Integer isDefault;
     private Integer sortOrder;
     private String tagType;
     private String tagClass;

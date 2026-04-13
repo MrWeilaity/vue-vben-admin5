@@ -23,29 +23,6 @@ export function useTypeFormSchema(): VbenFormSchema[] {
       rules: 'required',
     },
     {
-      component: 'InputNumber',
-      componentProps: { min: 0 },
-      defaultValue: 0,
-      fieldName: 'sortOrder',
-      label: $t('system.dict.sortOrder'),
-      rules: 'required',
-    },
-    {
-      component: 'RadioGroup',
-      componentProps: {
-        buttonStyle: 'solid',
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
-        optionType: 'button',
-      },
-      defaultValue: 1,
-      fieldName: 'cacheEnabled',
-      help: $t('system.dict.cacheEnabledHelp'),
-      label: $t('system.dict.cacheEnabled'),
-    },
-    {
       component: 'RadioGroup',
       componentProps: {
         buttonStyle: 'solid',
@@ -91,23 +68,10 @@ export function useDataFormSchema(): VbenFormSchema[] {
       rules: 'required',
     },
     {
-      component: 'RadioGroup',
-      componentProps: {
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
-        optionType: 'button',
-      },
-      defaultValue: 0,
-      fieldName: 'isDefault',
-      help: $t('system.dict.defaultHelp'),
-      label: $t('system.dict.isDefault'),
-    },
-    {
       component: 'Select',
       componentProps: {
         allowClear: true,
+        class: 'w-full',
         options: [
           { label: 'default', value: 'default' },
           { label: 'success', value: 'success' },
@@ -159,13 +123,6 @@ export function useTypeColumns<T = SystemDictApi.DictType>(
   const columns: VxeTableGridColumns = [
     { field: 'name', title: $t('system.dict.typeName'), minWidth: 180 },
     { field: 'code', title: $t('system.dict.typeCode'), minWidth: 180 },
-    { field: 'sortOrder', title: $t('system.dict.sortOrder'), width: 100 },
-    {
-      field: 'cacheEnabled',
-      title: $t('system.dict.cacheEnabled'),
-      width: 110,
-      cellRender: { name: 'CellTag' },
-    },
     {
       field: 'status',
       title: $t('system.dict.status'),
@@ -198,7 +155,7 @@ export function useTypeColumns<T = SystemDictApi.DictType>(
       field: 'operation',
       fixed: 'right',
       title: $t('system.dict.operation'),
-      width: 130,
+      width: 190,
     },
   ];
   return columns;
@@ -209,15 +166,9 @@ export function useDataColumns<T = SystemDictApi.DictData>(
 ) {
   const { hasAccessByCodes } = useAccess();
   const columns: VxeTableGridColumns = [
-    { field: 'label', title: $t('system.dict.label'), minWidth: 150 },
-    { field: 'value', title: $t('system.dict.value'), minWidth: 120 },
+    { field: 'label', title: $t('system.dict.label'), width: 150 },
+    { field: 'value', title: $t('system.dict.value'), width: 120 },
     { field: 'sortOrder', title: $t('system.dict.sortOrder'), width: 90 },
-    {
-      field: 'isDefault',
-      title: $t('system.dict.isDefault'),
-      width: 90,
-      cellRender: { name: 'CellTag' },
-    },
     {
       field: 'status',
       title: $t('system.dict.status'),

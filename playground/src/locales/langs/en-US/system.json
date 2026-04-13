@@ -10,13 +10,9 @@
     "title": "Department Management"
   },
   "dict": {
-    "cacheEnabled": "Cache",
-    "cacheEnabledHelp": "When enabled, dictionary is cached in Redis and local memory for high-frequency reads.",
     "cssStyle": "CSS Style",
     "dataList": "Dictionary Data List",
     "dataName": "Dictionary Item",
-    "defaultHelp": "It is recommended to keep only one default item per type.",
-    "isDefault": "Default",
     "label": "Label",
     "manageItems": "Manage Items",
     "name": "Dictionary",

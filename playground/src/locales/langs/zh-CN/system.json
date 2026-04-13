@@ -11,13 +11,9 @@
     "title": "部门管理"
   },
   "dict": {
-    "cacheEnabled": "缓存",
-    "cacheEnabledHelp": "开启后字典会写入 Redis 与本地缓存，适合高频读取场景。",
     "cssStyle": "扩展样式",
     "dataList": "字典项列表",
     "dataName": "字典项",
-    "defaultHelp": "同一字典类型建议仅保留一个默认项。",
-    "isDefault": "默认项",
     "label": "字典标签",
     "manageItems": "管理字典项",
     "name": "字典",

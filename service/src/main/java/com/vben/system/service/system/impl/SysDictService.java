@@ -62,7 +62,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
                 .like(StrUtil.isNotBlank(params.getName()), SysDictType::getName, params.getName())
                 .like(StrUtil.isNotBlank(params.getCode()), SysDictType::getCode, params.getCode())
                 .eq(params.getStatus() != null, SysDictType::getStatus, params.getStatus())
-                .orderByAsc(SysDictType::getSortOrder)
                 .orderByDesc(SysDictType::getId);
         Page<SysDictType> result = dictTypeMapper.selectPage(page, wrapper);
         List<DictTypeResponse> items = result.getRecords().stream().map(this::toTypeResponse).toList();
@@ -73,7 +72,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
     public List<DictTypeResponse> typeOptions() {
         return lambdaQuery()
                 .eq(SysDictType::getStatus, 1)
-                .orderByAsc(SysDictType::getSortOrder)
                 .orderByDesc(SysDictType::getId)
                 .list()
                 .stream()
@@ -89,9 +87,7 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         type.setName(normalizeName(request.getName()));
         type.setCode(code);
         type.setStatus(request.getStatus());
-        type.setCacheEnabled(request.getCacheEnabled());
         type.setBuiltIn(0);
-        type.setSortOrder(Objects.requireNonNullElse(request.getSortOrder(), 0));
         type.setRemark(request.getRemark());
         dictTypeMapper.insert(type);
         afterCommit(() -> syncTypeCache(type.getCode()));
@@ -107,8 +103,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         type.setName(normalizeName(request.getName()));
         type.setCode(code);
         type.setStatus(request.getStatus());
-        type.setCacheEnabled(request.getCacheEnabled());
-        type.setSortOrder(Objects.requireNonNullElse(request.getSortOrder(), 0));
         type.setRemark(request.getRemark());
         dictTypeMapper.updateById(type);
 
@@ -208,9 +202,7 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
                 .map(this::toDataResponse)
                 .toList();
 
-        if (type.getCacheEnabled() != null && type.getCacheEnabled() == 1) {
-            putCache(normalized, items);
-        }
+        putCache(normalized, items);
 
         return filterStatus(items, onlyEnabled);
     }
@@ -232,9 +224,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
     public void createData(DictDataCreateRequest request) {
         SysDictType type = requireTypeByCode(request.getTypeCode());
         ensureDataValueUnique(type.getCode(), request.getValue(), null);
-        if (request.getIsDefault() != null && request.getIsDefault() == 1) {
-            clearDefault(type.getCode(), null);
-        }
 
         SysDictData data = new SysDictData();
         data.setTypeId(type.getId());
@@ -242,7 +231,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         data.setLabel(normalizeLabel(request.getLabel()));
         data.setValue(normalizeValue(request.getValue()));
         data.setStatus(request.getStatus());
-        data.setIsDefault(request.getIsDefault());
         data.setSortOrder(Objects.requireNonNullElse(request.getSortOrder(), 0));
         data.setTagType(request.getTagType());
         data.setTagClass(request.getTagClass());
@@ -260,17 +248,12 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         SysDictType type = requireTypeByCode(request.getTypeCode());
         ensureDataValueUnique(type.getCode(), request.getValue(), id);
 
-        if (request.getIsDefault() != null && request.getIsDefault() == 1) {
-            clearDefault(type.getCode(), id);
-        }
-
         String oldTypeCode = data.getTypeCode();
         data.setTypeId(type.getId());
         data.setTypeCode(type.getCode());
         data.setLabel(normalizeLabel(request.getLabel()));
         data.setValue(normalizeValue(request.getValue()));
         data.setStatus(request.getStatus());
-        data.setIsDefault(request.getIsDefault());
         data.setSortOrder(Objects.requireNonNullElse(request.getSortOrder(), 0));
         data.setTagType(request.getTagType());
         data.setTagClass(request.getTagClass());
@@ -350,7 +333,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
 
     private void rebuildRedisCache() {
         List<SysDictType> allTypes = dictTypeMapper.selectList(new LambdaQueryWrapper<SysDictType>()
-                .eq(SysDictType::getCacheEnabled, 1)
                 .eq(SysDictType::getStatus, 1));
         if (allTypes.isEmpty()) {
             return;
@@ -377,7 +359,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
         SysDictType type = dictTypeMapper.selectOne(new LambdaQueryWrapper<SysDictType>()
                 .eq(SysDictType::getCode, typeCode));
         if (type == null
-                || type.getCacheEnabled() == null || type.getCacheEnabled() != 1
                 || type.getStatus() == null || type.getStatus() != 1) {
             evictCache(typeCode);
             return;
@@ -412,22 +393,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
             runnable.run();
         } catch (Exception e) {
             log.warn("字典缓存提交后同步失败", e);
-        }
-    }
-
-    private void clearDefault(String typeCode, Long excludeId) {
-        List<SysDictData> existingDefault = dictDataMapper.selectList(new LambdaQueryWrapper<SysDictData>()
-                .eq(SysDictData::getTypeCode, typeCode)
-                .eq(SysDictData::getIsDefault, 1));
-        if (existingDefault.isEmpty()) {
-            return;
-        }
-        for (SysDictData item : existingDefault) {
-            if (excludeId != null && Objects.equals(item.getId(), excludeId)) {
-                continue;
-            }
-            item.setIsDefault(0);
-            dictDataMapper.updateById(item);
         }
     }
 
@@ -523,9 +488,7 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
                 .name(type.getName())
                 .code(type.getCode())
                 .status(type.getStatus())
-                .cacheEnabled(type.getCacheEnabled())
                 .builtIn(type.getBuiltIn())
-                .sortOrder(type.getSortOrder())
                 .remark(type.getRemark())
                 .createTime(type.getCreateTime())
                 .build();
@@ -539,7 +502,6 @@ public class SysDictService extends ServiceImpl<SysDictTypeMapper, SysDictType> 
                 .label(data.getLabel())
                 .value(data.getValue())
                 .status(data.getStatus())
-                .isDefault(data.getIsDefault())
                 .sortOrder(data.getSortOrder())
                 .tagType(data.getTagType())
                 .tagClass(data.getTagClass())
