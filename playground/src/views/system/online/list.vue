@@ -33,9 +33,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     keepSource: true,
     proxyConfig: {
       ajax: {
-        query: async () => {
-          const items = await getOnlineUserList();
-          return { items, total: items.length };
+        query: async ({ page }) => {
+          return await getOnlineUserList({
+            page: page.currentPage,
+            pageSize: page.pageSize,
+          });
         },
       },
     },

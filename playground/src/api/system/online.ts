@@ -1,3 +1,5 @@
+import type { Recordable } from '@vben/types';
+
 import { requestClient } from '#/api/request';
 
 export namespace SystemOnlineApi {
@@ -17,9 +19,10 @@ export namespace SystemOnlineApi {
   }
 }
 
-export async function getOnlineUserList() {
+export async function getOnlineUserList(params: Recordable<any> = {}) {
   return await requestClient.get<Array<SystemOnlineApi.OnlineUser>>(
     '/system/online/list',
+    { params },
   );
 }
 

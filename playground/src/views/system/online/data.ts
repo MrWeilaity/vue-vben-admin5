@@ -15,27 +15,44 @@ export function useColumns<T = SystemOnlineApi.OnlineUser>(
     { field: 'username', title: $t('system.online.username'), width: 140 },
     { field: 'deptName', title: $t('system.online.deptName'), width: 140 },
     { field: 'loginIp', title: $t('system.online.loginIp'), width: 140 },
-    { field: 'loginAddress', title: $t('system.online.loginAddress'), minWidth: 180 },
+    {
+      field: 'loginAddress',
+      title: $t('system.online.loginAddress'),
+      minWidth: 180,
+    },
     { field: 'browser', title: $t('system.online.browser'), width: 140 },
     { field: 'os', title: $t('system.online.os'), width: 140 },
     { field: 'deviceType', title: $t('system.online.deviceType'), width: 110 },
     { field: 'loginTime', title: $t('system.online.loginTime'), width: 180 },
-    { field: 'lastAccessTime', title: $t('system.online.lastAccessTime'), width: 180 },
+    {
+      field: 'lastAccessTime',
+      title: $t('system.online.lastAccessTime'),
+      width: 180,
+    },
     { field: 'expiresAt', title: $t('system.online.expiresAt'), width: 180 },
     {
       align: 'center',
       cellRender: {
         attrs: {
-          nameField: 'username',
-          nameTitle: $t('system.online.username'),
+          nameField: 'sessionId',
+          nameTitle: $t('system.online.sessionId'),
           onClick: onActionClick,
         },
         name: 'CellOperation',
         options: [
           {
             code: 'offline',
+            confirm: true,
+            confirmMessage: (row: T) =>
+              $t('system.online.offlineConfirm', [
+                (row as SystemOnlineApi.OnlineUser).sessionId,
+              ]),
+            confirmTitle: $t('system.online.comfirmTitle', [
+              $t('system.online.sessionId') || '',
+            ]),
             show: (row: T) =>
-              hasAccessByCodes(['System:Online:Offline']) && !(row as SystemOnlineApi.OnlineUser).current,
+              hasAccessByCodes(['System:Online:Offline']) &&
+              !(row as SystemOnlineApi.OnlineUser).current,
             text: $t('system.online.offline'),
           },
         ],

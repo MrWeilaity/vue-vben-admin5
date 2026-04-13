@@ -1,6 +1,8 @@
 package com.vben.system.service.system.impl;
 
+import com.vben.system.common.PageResult;
 import com.vben.system.common.exception.BadRequestException;
+import com.vben.system.dto.params.BasePage;
 import com.vben.system.dto.system.user.OnlineUserResponse;
 import com.vben.system.entity.SysDept;
 import com.vben.system.entity.SysUser;
@@ -26,18 +28,26 @@ public class SysOnlineUserService implements ISysOnlineUserService {
     private final LoginUserService loginUserService;
 
     @Override
-    public List<OnlineUserResponse> list() {
+    public PageResult<OnlineUserResponse> list(BasePage params) {
         List<AuthSessionService.SessionRecord> sessions = authSessionService.listAllSessions();
         if (sessions.isEmpty()) {
-            return List.of();
+            return new PageResult<>(0, List.of());
         }
-        Set<Long> userIds = sessions.stream().map(AuthSessionService.SessionRecord::getUserId).collect(Collectors.toSet());
-        Map<Long, SysUser> userMap = sysUserService.listByIds(userIds).stream().collect(Collectors.toMap(SysUser::getId, v -> v));
+        int total = sessions.size();
+        int fromIndex = Math.min((params.getPage() - 1) * params.getPageSize(), total);
+        int toIndex = Math.min(fromIndex + params.getPageSize(), total);
+        List<AuthSessionService.SessionRecord> pageSessions = sessions.subList(fromIndex, toIndex);
+        Set<Long> userIds = pageSessions.stream().map(AuthSessionService.SessionRecord::getUserId).collect(Collectors.toSet());
+        Map<Long, SysUser> userMap = userIds.isEmpty()
+                ? Map.of()
+                : sysUserService.listByIds(userIds).stream().collect(Collectors.toMap(SysUser::getId, v -> v));
         Set<Long> deptIds = userMap.values().stream().map(SysUser::getDeptId).filter(id -> id != null && id > 0).collect(Collectors.toSet());
-        Map<Long, String> deptMap = sysDeptService.listByIds(deptIds).stream().collect(Collectors.toMap(SysDept::getId, SysDept::getName));
+        Map<Long, String> deptMap = deptIds.isEmpty()
+                ? Map.of()
+                : sysDeptService.listByIds(deptIds).stream().collect(Collectors.toMap(SysDept::getId, SysDept::getName));
         String currentSessionId = loginUserService.getCurrentSessionId();
 
-        return sessions.stream().map(item -> {
+        List<OnlineUserResponse> items = pageSessions.stream().map(item -> {
             SysUser user = userMap.get(item.getUserId());
             String deptName = user == null ? "-" : deptMap.getOrDefault(user.getDeptId(), "-");
             return OnlineUserResponse.builder()
@@ -56,6 +66,7 @@ public class SysOnlineUserService implements ISysOnlineUserService {
                     .current(StringUtils.hasText(currentSessionId) && currentSessionId.equals(item.getSessionId()))
                     .build();
         }).toList();
+        return new PageResult<>(total, items);
     }
 
     @Override

@@ -1,11 +1,11 @@
 package com.vben.system.service.system;
 
+import com.vben.system.common.PageResult;
+import com.vben.system.dto.params.BasePage;
 import com.vben.system.dto.system.user.OnlineUserResponse;
 
-import java.util.List;
-
 public interface ISysOnlineUserService {
-    List<OnlineUserResponse> list();
+    PageResult<OnlineUserResponse> list(BasePage params);
 
     void offline(String sessionId);
 }

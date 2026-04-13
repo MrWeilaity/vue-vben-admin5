@@ -183,11 +183,16 @@ setupVbenVxeTable({
           .filter((opt) => opt.show !== false);
 
         function renderBtn(opt: Recordable<any>, listen = true) {
+          const btnProps = objectOmit(opt, [
+            'confirm',
+            'confirmMessage',
+            'confirmTitle',
+          ]);
           return h(
             Button,
             {
               ...props,
-              ...opt,
+              ...btnProps,
               icon: undefined,
               onClick: listen
                 ? () =>
@@ -214,6 +219,11 @@ setupVbenVxeTable({
 
         function renderConfirm(opt: Recordable<any>) {
           let viewportWrapper: HTMLElement | null = null;
+          const confirmProps = objectOmit(opt, [
+            'confirm',
+            'confirmMessage',
+            'confirmTitle',
+          ]);
           return h(
             Popconfirm,
             {
@@ -229,9 +239,11 @@ setupVbenVxeTable({
                 return document.body;
               },
               placement: 'topLeft',
-              title: $t('ui.actionTitle.delete', [attrs?.nameTitle || '']),
+              title:
+                opt.confirmTitle ??
+                $t('ui.actionTitle.delete', [attrs?.nameTitle || '']),
               ...props,
-              ...opt,
+              ...confirmProps,
               icon: undefined,
               onOpenChange: (open: boolean) => {
                 // 当弹窗打开时，禁止表格的滚动
@@ -254,16 +266,19 @@ setupVbenVxeTable({
                 h(
                   'div',
                   { class: 'truncate' },
-                  $t('ui.actionMessage.deleteConfirm', [
-                    row[attrs?.nameField || 'name'],
-                  ]),
+                  opt.confirmMessage ??
+                    $t('ui.actionMessage.deleteConfirm', [
+                      row[attrs?.nameField || 'name'],
+                    ]),
                 ),
             },
           );
         }
 
         const btns = operations.map((opt) =>
-          opt.code === 'delete' ? renderConfirm(opt) : renderBtn(opt),
+          opt.code === 'delete' || opt.confirm
+            ? renderConfirm(opt)
+            : renderBtn(opt),
         );
         return h(
           'div',
