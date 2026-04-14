@@ -28,7 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ControllerAnnotationStartupValidator implements SmartInitializingSingleton {
 
-    private static final String CONTROLLER_PACKAGE_PREFIX = "com.vben.system.controller";
+    private static final String CONTROLLER_PACKAGE_SEGMENT = ".controller.";
 
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 
@@ -52,7 +52,7 @@ public class ControllerAnnotationStartupValidator implements SmartInitializingSi
     }
 
     private void validateControllerClass(Class<?> beanType, List<String> violations) {
-        if (!beanType.getName().startsWith(CONTROLLER_PACKAGE_PREFIX)) {
+        if (!isControllerLayer(beanType)) {
             return;
         }
         RequestMapping classRequestMapping = AnnotationUtils.findAnnotation(beanType, RequestMapping.class);
@@ -69,6 +69,11 @@ public class ControllerAnnotationStartupValidator implements SmartInitializingSi
         for (Method method : beanType.getDeclaredMethods()) {
             validateMethod(beanType, method, violations);
         }
+    }
+
+    private boolean isControllerLayer(Class<?> beanType) {
+        String packageName = beanType.getPackageName();
+        return packageName.endsWith(".controller") || packageName.contains(CONTROLLER_PACKAGE_SEGMENT);
     }
 
     private boolean hasAnyPath(RequestMapping requestMapping) {
