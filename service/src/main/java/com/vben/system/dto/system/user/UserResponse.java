@@ -41,6 +41,8 @@ public class UserResponse {
     private List<Long> roleIds;
     /** 岗位ID集合 */
     private List<Long> postIds;
+    /** 自定义数据权限部门ID集合 */
+    private List<Long> dataScopeDeptIds;
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

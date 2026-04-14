@@ -104,6 +104,34 @@ export function useFormSchema(): VbenFormSchema[] {
       },
     },
     {
+      component: 'Select',
+      fieldName: 'dataScope',
+      label: $t('system.dataScope.name'),
+      defaultValue: 5,
+      rules: 'required',
+      componentProps: {
+        class: 'w-full',
+        options: [
+          { label: $t('system.dataScope.all'), value: 1 },
+          { label: $t('system.dataScope.custom'), value: 2 },
+          { label: $t('system.dataScope.dept'), value: 3 },
+          { label: $t('system.dataScope.deptAndChild'), value: 4 },
+          { label: $t('system.dataScope.self'), value: 5 },
+        ],
+      },
+    },
+    {
+      component: 'Input',
+      fieldName: 'dataScopeDeptIds',
+      label: $t('system.dataScope.customDept'),
+      formItemClass: 'items-start',
+      modelPropName: 'modelValue',
+      dependencies: {
+        show: (values) => values.dataScope === 2,
+        triggerFields: ['dataScope'],
+      },
+    },
+    {
       component: 'InputPassword',
       fieldName: 'password',
       label: $t('authentication.password'),
@@ -175,6 +203,19 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       width: 160,
       field: 'dept',
       title: $t('system.user.dept'),
+    },
+    {
+      field: 'dataScope',
+      formatter: ({ cellValue }) =>
+        ({
+          1: $t('system.dataScope.all'),
+          2: $t('system.dataScope.custom'),
+          3: $t('system.dataScope.dept'),
+          4: $t('system.dataScope.deptAndChild'),
+          5: $t('system.dataScope.self'),
+        })[cellValue as 1 | 2 | 3 | 4 | 5] ?? '',
+      title: $t('system.dataScope.name'),
+      width: 160,
     },
     {
       field: 'remark',

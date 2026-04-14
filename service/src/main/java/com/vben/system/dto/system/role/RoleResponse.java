@@ -30,6 +30,10 @@ public class RoleResponse {
      */
     private Integer status;
     /**
+     * 数据权限范围
+     */
+    private Integer dataScope;
+    /**
      * 备注
      */
     private String remark;
@@ -42,4 +46,8 @@ public class RoleResponse {
      * 权限标识集合
      */
     private List<Long> permissions;
+    /**
+     * 自定义数据权限部门ID集合
+     */
+    private List<Long> dataScopeDeptIds;
 }

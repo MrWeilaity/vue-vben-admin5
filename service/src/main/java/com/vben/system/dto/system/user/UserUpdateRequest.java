@@ -42,7 +42,8 @@ public class UserUpdateRequest {
     /**
      * 数据权限范围
      */
-    @Min(value = 0, message = "数据权限范围不合法")
+    @Min(value = 1, message = "数据权限范围不合法")
+    @Max(value = 5, message = "数据权限范围不合法")
     private Integer dataScope;
     /**
      * 备注
@@ -57,4 +58,8 @@ public class UserUpdateRequest {
      * 岗位ID集合
      */
     private List<@Min(value = 1, message = "岗位ID必须大于0") Long> postIds;
+    /**
+     * 自定义数据权限部门ID集合
+     */
+    private List<@Min(value = 1, message = "数据权限部门ID必须大于0") Long> dataScopeDeptIds;
 }

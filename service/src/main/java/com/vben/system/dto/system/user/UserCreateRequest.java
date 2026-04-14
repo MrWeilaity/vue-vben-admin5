@@ -38,7 +38,9 @@ public class UserCreateRequest {
     @Max(value = 1, message = "状态值不合法")
     private Integer status;
     /** 数据权限范围 */
-    @Min(value = 0, message = "数据权限范围不合法")
+    @NotNull(message = "数据权限范围不能为空")
+    @Min(value = 1, message = "数据权限范围不合法")
+    @Max(value = 5, message = "数据权限范围不合法")
     private Integer dataScope;
     /** 备注 */
     @Size(max = 255, message = "备注长度不能超过255")
@@ -47,4 +49,6 @@ public class UserCreateRequest {
     private List<@Min(value = 1, message = "角色ID必须大于0") Long> roleIds;
     /** 岗位ID集合 */
     private List<@Min(value = 1, message = "岗位ID必须大于0") Long> postIds;
+    /** 自定义数据权限部门ID集合 */
+    private List<@Min(value = 1, message = "数据权限部门ID必须大于0") Long> dataScopeDeptIds;
 }

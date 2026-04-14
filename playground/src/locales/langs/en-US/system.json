@@ -9,6 +9,15 @@
     "status": "Status",
     "title": "Department Management"
   },
+  "dataScope": {
+    "all": "All data permission",
+    "custom": "Custom data permission",
+    "customDept": "Custom department permission",
+    "dept": "Current department permission",
+    "deptAndChild": "Department and children permission",
+    "name": "Data scope permission",
+    "self": "Own data only permission"
+  },
   "dict": {
     "cssStyle": "CSS Style",
     "dataList": "Dictionary Data List",

@@ -29,6 +29,34 @@ export function useFormSchema(): VbenFormSchema[] {
       label: $t('system.role.status'),
     },
     {
+      component: 'Select',
+      componentProps: {
+        class: 'w-full',
+        options: [
+          { label: $t('system.dataScope.all'), value: 1 },
+          { label: $t('system.dataScope.custom'), value: 2 },
+          { label: $t('system.dataScope.dept'), value: 3 },
+          { label: $t('system.dataScope.deptAndChild'), value: 4 },
+          { label: $t('system.dataScope.self'), value: 5 },
+        ],
+      },
+      defaultValue: 5,
+      fieldName: 'dataScope',
+      label: $t('system.dataScope.name'),
+      rules: 'required',
+    },
+    {
+      component: 'Input',
+      dependencies: {
+        show: (values) => values.dataScope === 2,
+        triggerFields: ['dataScope'],
+      },
+      fieldName: 'dataScopeDeptIds',
+      formItemClass: 'items-start',
+      label: $t('system.dataScope.customDept'),
+      modelPropName: 'modelValue',
+    },
+    {
       component: 'Textarea',
       fieldName: 'remark',
       label: $t('system.role.remark'),
@@ -101,6 +129,19 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
       field: 'status',
       title: $t('system.role.status'),
       width: 100,
+    },
+    {
+      field: 'dataScope',
+      formatter: ({ cellValue }) =>
+        ({
+          1: $t('system.dataScope.all'),
+          2: $t('system.dataScope.custom'),
+          3: $t('system.dataScope.dept'),
+          4: $t('system.dataScope.deptAndChild'),
+          5: $t('system.dataScope.self'),
+        })[cellValue as 1 | 2 | 3 | 4 | 5] ?? '',
+      title: $t('system.dataScope.name'),
+      width: 160,
     },
     {
       field: 'remark',

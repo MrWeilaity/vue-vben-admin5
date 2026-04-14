@@ -81,7 +81,7 @@ public class SysUser {
      * @param postIds 部门id集合
      * @return
      */
-    public UserResponse toUserResponse(List<Long> roleIds, List<Long> postIds, String dept) {
+    public UserResponse toUserResponse(List<Long> roleIds, List<Long> postIds, List<Long> dataScopeDeptIds, String dept) {
         return UserResponse.builder()
                 .id(getId())
                 .username(getUsername())
@@ -95,6 +95,7 @@ public class SysUser {
                 .remark(getRemark())
                 .roleIds(new HashSet<>(roleIds).stream().toList())
                 .postIds(new HashSet<>(postIds).stream().toList())
+                .dataScopeDeptIds(new HashSet<>(dataScopeDeptIds).stream().toList())
                 .createTime(getCreateTime())
                 .build();
     }

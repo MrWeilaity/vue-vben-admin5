@@ -25,6 +25,11 @@ public class RoleCreateRequest {
     @Min(value = 0, message = "状态值不合法")
     @Max(value = 1, message = "状态值不合法")
     private Integer status;
+    /** 数据权限范围 */
+    @NotNull(message = "数据权限范围不能为空")
+    @Min(value = 1, message = "数据权限范围不合法")
+    @Max(value = 5, message = "数据权限范围不合法")
+    private Integer dataScope;
     /**
      * 备注
      */
@@ -33,4 +38,8 @@ public class RoleCreateRequest {
      * 权限代码 id
      */
     private List<@Min(value = 1, message = "permissions中的每个值必须大于0") Long> permissions;
+    /**
+     * 自定义数据权限部门ID集合
+     */
+    private List<@Min(value = 1, message = "dataScopeDeptIds中的每个值必须大于0") Long> dataScopeDeptIds;
 }

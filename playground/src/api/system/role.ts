@@ -5,6 +5,8 @@ import { requestClient } from '#/api/request';
 export namespace SystemRoleApi {
   export interface SystemRole {
     [key: string]: any;
+    dataScope: 1 | 2 | 3 | 4 | 5;
+    dataScopeDeptIds?: string[];
     id: number;
     name: string;
     permissions: string[];

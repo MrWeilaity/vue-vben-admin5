@@ -14,15 +14,20 @@ import com.vben.system.dto.system.user.UserUpdateRequest;
 import com.vben.system.dto.user.UserPasswordResetRequest;
 import com.vben.system.entity.SysDept;
 import com.vben.system.entity.SysUser;
+import com.vben.system.entity.SysUserDept;
 import com.vben.system.entity.SysUserPost;
 import com.vben.system.entity.SysUserRole;
 import com.vben.system.mapper.SysDeptMapper;
+import com.vben.system.mapper.SysUserDeptMapper;
 import com.vben.system.mapper.SysUserMapper;
 import com.vben.system.mapper.SysUserPostMapper;
 import com.vben.system.mapper.SysUserRoleMapper;
 import com.vben.system.service.AuthService;
 import com.vben.system.service.system.ISysUserService;
 import com.vben.system.security.LoginUserService;
+import com.vben.system.security.datascope.DataScope;
+import com.vben.system.security.datascope.DataScopeService;
+import com.vben.system.security.datascope.DataScopeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,18 +50,23 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysUserPostMapper userPostMapper;
+    private final SysUserDeptMapper userDeptMapper;
     private final AuthService authService;
     private final SysDeptMapper deptMapper;
     private final PasswordEncoder passwordEncoder;
     private final LoginUserService loginUserService;
+    private final DataScopeService dataScopeService;
     @Value("${system.security.protected-user-id:1}")
     private Long protectedUserId;
 
     /**
      * 查询用户列表（按 ID 倒序）。
+     * 用户管理页展示的是用户记录本身，当前表没有 create_by 字段，
+     * 所以“仅本人数据”这里按用户表 id 判断。
      *
      * @return 用户列表
      */
+    @DataScope(mapper = SysUserMapper.class, deptColumn = "dept_id", userColumn = "id")
     public PageResult<UserResponse> list(UserParams userParams) {
         Page<SysUser> page = new Page<>(userParams.getPage(), userParams.getPageSize());
         Page<SysUser> result = lambdaQuery()
@@ -68,11 +78,13 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         List<Long> userIds = result.getRecords().stream().map(SysUser::getId).toList();
         Map<Long, List<Long>> roleIdsByUserId = getRoleIdsByUserIds(userIds);
         Map<Long, List<Long>> postIdsByUserId = getPostIdsByUserIds(userIds);
+        Map<Long, List<Long>> dataScopeDeptIdsByUserId = getDataScopeDeptIdsByUserIds(userIds);
         Map<Long, String> deptMap = getDeptNamesByDeptIds();
         List<UserResponse> list = result.getRecords().stream()
                 .map(user -> user.toUserResponse(
                         roleIdsByUserId.getOrDefault(user.getId(), List.of()),
                         postIdsByUserId.getOrDefault(user.getId(), List.of()),
+                        dataScopeDeptIdsByUserId.getOrDefault(user.getId(), List.of()),
                         deptMap.get(user.getDeptId())
                 ))
                 .toList();
@@ -86,6 +98,8 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      */
     @Transactional(rollbackFor = Exception.class)
     public void create(UserCreateRequest request) {
+        validateDataScope(request.getDataScope(), request.getDataScopeDeptIds());
+        dataScopeService.assertAccessible(request.getDeptId(), null);
         SysUser user = new SysUser();
         user.setUsername(request.getUsername());
         user.setNickname(request.getNickname());
@@ -101,6 +115,7 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         userMapper.insert(user);
         saveUserRoles(user.getId(), roleIds);
         saveUserPosts(user.getId(), postIds);
+        saveUserDataScopeDepts(user.getId(), request.getDataScope(), request.getDataScopeDeptIds());
     }
 
     /**
@@ -112,14 +127,22 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, UserUpdateRequest updateUser) {
         SysUser existingUser = assertUserExists(id);
+        dataScopeService.assertAccessible(existingUser.getDeptId(), existingUser.getId());
+        Integer dataScope = updateUser.getDataScope() == null ? existingUser.getDataScope() : updateUser.getDataScope();
+        if (updateUser.getDataScope() != null || updateUser.getDataScopeDeptIds() != null) {
+            validateDataScope(dataScope, updateUser.getDataScopeDeptIds());
+        }
+        if (updateUser.getDeptId() != null) {
+            dataScopeService.assertAccessible(updateUser.getDeptId(), null);
+        }
         lambdaUpdate().eq(SysUser::getId, id)
-                .set(updateUser.getNickname()!=null, SysUser::getNickname, updateUser.getNickname())
+                .set(updateUser.getNickname() != null, SysUser::getNickname, updateUser.getNickname())
                 .set(updateUser.getDeptId() != null, SysUser::getDeptId, updateUser.getDeptId())
-                .set(updateUser.getEmail()!=null, SysUser::getEmail, updateUser.getEmail())
-                .set(updateUser.getMobile()!=null, SysUser::getMobile, updateUser.getMobile())
+                .set(updateUser.getEmail() != null, SysUser::getEmail, updateUser.getEmail())
+                .set(updateUser.getMobile() != null, SysUser::getMobile, updateUser.getMobile())
                 .set(updateUser.getStatus() != null, SysUser::getStatus, updateUser.getStatus())
                 .set(updateUser.getDataScope() != null, SysUser::getDataScope, updateUser.getDataScope())
-                .set(updateUser.getRemark()!=null, SysUser::getRemark, updateUser.getRemark())
+                .set(updateUser.getRemark() != null, SysUser::getRemark, updateUser.getRemark())
                 .update();
         if (updateUser.getRoleIds() != null) {
             List<Long> roleIds = updateUser.getRoleIds();
@@ -128,6 +151,9 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         if (updateUser.getPostIds() != null) {
             List<Long> postIds = updateUser.getPostIds();
             saveUserPosts(id, postIds);
+        }
+        if (updateUser.getDataScope() != null || updateUser.getDataScopeDeptIds() != null) {
+            saveUserDataScopeDepts(id, dataScope, updateUser.getDataScopeDeptIds());
         }
         if (updateUser.getStatus() != null && updateUser.getStatus() != 1
                 && (existingUser.getStatus() == null || existingUser.getStatus() == 1)) {
@@ -149,9 +175,11 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         if (protectedUserId != null && protectedUserId.equals(user.getId())) {
             throw new ServiceException("系统管理员账号不允许删除");
         }
+        dataScopeService.assertAccessible(user.getDeptId(), user.getId());
         userMapper.deleteById(id);
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
         userPostMapper.delete(new LambdaQueryWrapper<SysUserPost>().eq(SysUserPost::getUserId, id));
+        userDeptMapper.delete(new LambdaQueryWrapper<SysUserDept>().eq(SysUserDept::getUserId, id));
         authService.forceOffline(id);
     }
 
@@ -161,12 +189,14 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
      * @param id 用户 ID
      */
     public void forceOffline(Long id) {
-        assertUserExists(id);
+        SysUser user = assertUserExists(id);
+        dataScopeService.assertAccessible(user.getDeptId(), user.getId());
         authService.forceOffline(id);
     }
 
     public List<UserSessionResponse> listSessions(Long id) {
         SysUser user = assertUserExists(id);
+        dataScopeService.assertAccessible(user.getDeptId(), user.getId());
         String currentSessionId = null;
         try {
             if (id.equals(loginUserService.getCurrentUserId())) {
@@ -178,7 +208,8 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     }
 
     public void offlineSession(Long id, String sessionId) {
-        assertUserExists(id);
+        SysUser user = assertUserExists(id);
+        dataScopeService.assertAccessible(user.getDeptId(), user.getId());
         authService.forceOffline(id, sessionId);
     }
 
@@ -198,6 +229,21 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
         return userPostMapper.selectList(new LambdaQueryWrapper<SysUserPost>().in(SysUserPost::getUserId, userIds))
                 .stream()
                 .collect(Collectors.groupingBy(SysUserPost::getUserId, Collectors.mapping(SysUserPost::getPostId, Collectors.toList())));
+    }
+
+    /**
+     * 批量查询用户自身配置的自定义数据权限部门，用于用户列表和编辑回显。
+     *
+     * @param userIds 用户 ID 集合
+     * @return key 为用户 ID，value 为该用户配置的自定义部门 ID 集合
+     */
+    public Map<Long, List<Long>> getDataScopeDeptIdsByUserIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userDeptMapper.selectList(new LambdaQueryWrapper<SysUserDept>().in(SysUserDept::getUserId, userIds))
+                .stream()
+                .collect(Collectors.groupingBy(SysUserDept::getUserId, Collectors.mapping(SysUserDept::getDeptId, Collectors.toList())));
     }
 
     /**
@@ -261,13 +307,43 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
     }
 
     /**
+     * 同步用户自身和自定义数据权限部门的关系。
+     * <p>
+     * 每次保存都先删除旧关系；只有 {@code dataScope=2}（自定义数据）时才写入新部门集合，
+     * 其它数据权限类型会清空原有自定义部门，避免历史配置残留。
+     *
+     * @param userId    用户 ID
+     * @param dataScope 数据权限类型
+     * @param deptIds   自定义部门 ID 集合
+     */
+    private void saveUserDataScopeDepts(Long userId, Integer dataScope, List<Long> deptIds) {
+        userDeptMapper.delete(new LambdaQueryWrapper<SysUserDept>().eq(SysUserDept::getUserId, userId));
+        if (!java.util.Objects.equals(DataScopeType.CUSTOM.getValue(), dataScope)) {
+            return;
+        }
+        Set<Long> distinctDeptIds = new LinkedHashSet<>(deptIds);
+        List<SysUserDept> relations = new ArrayList<>();
+        for (Long deptId : distinctDeptIds) {
+            if (deptId == null) {
+                continue;
+            }
+            SysUserDept relation = new SysUserDept();
+            relation.setUserId(userId);
+            relation.setDeptId(deptId);
+            relations.add(relation);
+        }
+        relations.forEach(userDeptMapper::insert);
+    }
+
+    /**
      * 重置用户密码
      *
      * @param id      用户id
      * @param request 重置密码请求体
      */
     public void resetPassword(Long id, UserPasswordResetRequest request) {
-        assertUserExists(id);
+        SysUser user = assertUserExists(id);
+        dataScopeService.assertAccessible(user.getDeptId(), user.getId());
         lambdaUpdate().eq(SysUser::getId, id)
                 .set(SysUser::getPassword, passwordEncoder.encode(request.getNewPassword()))
                 .update();
@@ -280,5 +356,19 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> implemen
             throw new ServiceException("用户不存在或已被删除");
         }
         return user;
+    }
+
+    /**
+     * 校验用户数据权限配置是否有效。
+     * <p>
+     * 数据权限必须是 1-5；选择自定义数据时必须至少选择一个部门。
+     */
+    private void validateDataScope(Integer dataScope, List<Long> deptIds) {
+        if (!DataScopeType.isValid(dataScope)) {
+            throw new ServiceException("数据权限范围不合法");
+        }
+        if (java.util.Objects.equals(DataScopeType.CUSTOM.getValue(), dataScope) && (deptIds == null || deptIds.isEmpty())) {
+            throw new ServiceException("自定义数据权限必须选择部门");
+        }
     }
 }

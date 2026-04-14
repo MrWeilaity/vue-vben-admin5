@@ -23,6 +23,8 @@ public class SysRole {
     private String name;
     /** 状态 */
     private Integer status;
+    /** 数据权限范围 */
+    private Integer dataScope;
     /** 权限集合JSON */
     @TableField(typeHandler = JsonbLongListTypeHandler.class)
     private List<Long> permissions;

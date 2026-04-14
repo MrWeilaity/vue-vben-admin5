@@ -13,6 +13,7 @@ import { IconifyIcon } from '@vben/icons';
 import { Spin } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
+import { getDeptList } from '#/api/system/dept';
 import { getMenuList } from '#/api/system/menu';
 import { createRole, updateRole } from '#/api/system/role';
 import { $t } from '#/locales';
@@ -30,6 +31,8 @@ const [Form, formApi] = useVbenForm({
 
 const permissions = ref<DataNode[]>([]);
 const loadingPermissions = ref(false);
+const dataScopeDepts = ref<DataNode[]>([]);
+const loadingDataScopeDepts = ref(false);
 
 const id = ref();
 const [Drawer, drawerApi] = useVbenDrawer({
@@ -37,8 +40,13 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const { valid } = await formApi.validate();
     if (!valid) return;
     const values = await formApi.getValues();
+    const payload = {
+      ...values,
+      dataScopeDeptIds:
+        values.dataScope === 2 ? (values.dataScopeDeptIds ?? []) : [],
+    };
     drawerApi.lock();
-    (id.value ? updateRole(id.value, values) : createRole(values))
+    (id.value ? updateRole(id.value, payload) : createRole(payload))
       .then(() => {
         emits('success');
         drawerApi.close();
@@ -57,11 +65,15 @@ const [Drawer, drawerApi] = useVbenDrawer({
         formData.value = data;
         id.value = data.id;
       } else {
+        formData.value = undefined;
         id.value = undefined;
       }
 
       if (permissions.value.length === 0) {
         await loadPermissions();
+      }
+      if (dataScopeDepts.value.length === 0) {
+        await loadDataScopeDepts();
       }
       // Wait for Vue to flush DOM updates (form fields mounted)
       await nextTick();
@@ -79,6 +91,16 @@ async function loadPermissions() {
     permissions.value = res as unknown as DataNode[];
   } finally {
     loadingPermissions.value = false;
+  }
+}
+
+async function loadDataScopeDepts() {
+  loadingDataScopeDepts.value = true;
+  try {
+    const res = await getDeptList();
+    dataScopeDepts.value = res as unknown as DataNode[];
+  } finally {
+    loadingDataScopeDepts.value = false;
   }
 }
 
@@ -118,6 +140,19 @@ function getNodeClass(node: Recordable<any>) {
               {{ $t(value.meta.title) }}
             </template>
           </Tree>
+        </Spin>
+      </template>
+      <template #dataScopeDeptIds="slotProps">
+        <Spin :spinning="loadingDataScopeDepts" wrapper-class-name="w-full">
+          <Tree
+            :tree-data="dataScopeDepts"
+            multiple
+            bordered
+            :default-expanded-level="2"
+            v-bind="slotProps"
+            value-field="id"
+            label-field="name"
+          />
         </Spin>
       </template>
     </Form>

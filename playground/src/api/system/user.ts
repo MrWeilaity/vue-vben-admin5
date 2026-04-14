@@ -7,6 +7,7 @@ export namespace SystemUserApi {
     [key: string]: any;
     createTime?: string;
     dataScope: 1 | 2 | 3 | 4 | 5;
+    dataScopeDeptIds?: string[];
     deptId: string;
     email?: string;
     id: number;
