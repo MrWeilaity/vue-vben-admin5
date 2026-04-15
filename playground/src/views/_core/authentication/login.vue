@@ -108,23 +108,28 @@ const formSchema = computed((): VbenFormSchema[] => {
       componentProps: {
         requestCaptcha: getCaptchaApi,
       },
-      formFieldProps: {
-        validateOnBlur: true,
-        validateOnChange: false,
-        validateOnInput: false,
-        validateOnModelUpdate: false,
-      },
-      rules: z.object({
-        captchaCode: z
-          .string()
-          .trim()
-          .min(1, {
-            message: $t('authentication.captchaPlaceholder'),
+      // formFieldProps: {
+      //   validateOnBlur: true,
+      //   validateOnChange: true,
+      //   validateOnInput: true,
+      //   validateOnModelUpdate: true,
+      // },
+      rules: z
+        .object({
+          captchaCode: z
+            .string()
+            .trim()
+            .min(1, {
+              message: $t('authentication.captchaPlaceholder'),
+            }),
+          captchaKey: z.string().min(1, {
+            message: $t('authentication.refresh'),
           }),
-        captchaKey: z.string().min(1, {
-          message: $t('authentication.refresh'),
+        })
+        .default({
+          captchaCode: '',
+          captchaKey: '',
         }),
-      }),
     },
   ];
 });
