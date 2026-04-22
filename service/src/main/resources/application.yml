@@ -23,7 +23,6 @@ mybatis-plus:
     db-config:
       id-type: AUTO
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
 
 security:
@@ -46,7 +45,8 @@ springdoc:
 
 logging:
   level:
-    root: INFO
+    com.vben: debug
+    org.springframework: warn
 
 system:
   security:
