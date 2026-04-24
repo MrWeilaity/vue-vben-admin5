@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7
+    container_name: vben_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - ./data/dev/redis_data:/data
+    ports:
+      - "6379:6379"
+  postgres:
+    image: postgres:17
+    container_name: vben_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: vben_admin
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/dev/postgres:/var/lib/postgresql/data

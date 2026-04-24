@@ -58,3 +58,5 @@ vite.config.ts.*
 .codex
 skills-lock.json
 target
+# data
+service/data

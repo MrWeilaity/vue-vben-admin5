@@ -2,20 +2,12 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    active: prod
   application:
     name: vben-service
-  datasource:
-    url: jdbc:postgresql://localhost:5432/vben_admin
-    username: postgres
-    password: 123456
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      database: 0
   flyway:
     enabled: true
-    baseline-on-migrate: true
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -42,11 +34,6 @@ springdoc:
     display-request-duration: true
   scalar:
     path: /scalar
-
-logging:
-  level:
-    com.vben: debug
-    org.springframework: warn
 
 system:
   security:

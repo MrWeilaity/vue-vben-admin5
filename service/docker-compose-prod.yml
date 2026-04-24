@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  service:
+    image: vben-service:latest
+    restart: unless-stopped
+    # ports:
+    #   - "8080:8080"
+    environment:
+      PGSQL_PASSWORD: ztf@#2025
+      REDIS_PASSWORD: ztf@#2025
+    volumes:
+      - ./data/logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+  web:
+    image: vben-web:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      service:
+        condition: service_started
+
+  redis:
+    image: redis:7
+    container_name: vben_redis
+    command: redis-server --appendonly yes --requirepass ztf@#2025
+    restart: unless-stopped
+    volumes:
+      - ./data/redis_data:/data
+    # ports:
+    #   - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "ztf@#2025", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres:
+    image: postgres:17
+    container_name: vben_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ztf@#2025
+      POSTGRES_DB: vben_admin
+      TZ: Asia/Shanghai
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d vben_admin && PGPASSWORD='ztf@#2025' psql -U postgres -d vben_admin -c 'SELECT 1' > /dev/null"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
