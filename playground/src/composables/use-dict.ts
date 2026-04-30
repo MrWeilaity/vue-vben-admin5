@@ -1,7 +1,12 @@
+import type { SystemDictApi } from '#/api/system/dict';
+
 import { computed, ref } from 'vue';
 
 import { getDictByTypeCode, getDictByTypeCodes } from '#/api';
-
+type Option = {
+  label: string;
+  value: string;
+};
 /**
  * 字典前端消费能力。
  * - 统一从后端字典中心读取
@@ -9,7 +14,7 @@ import { getDictByTypeCode, getDictByTypeCodes } from '#/api';
  */
 export function useDict(typeCode: string) {
   const loading = ref(false);
-  const options = ref<any[]>([]);
+  const options = ref<SystemDictApi.DictData[]>([]);
 
   /**
    * 从后端读取指定字典类型的启用项。
@@ -30,20 +35,21 @@ export function useDict(typeCode: string) {
    * 根据字典值获取展示标签。
    * 使用字符串比较，兼容后端返回字符串值、业务侧传数字值的场景。
    */
-  function getLabel(value: number | string | undefined) {
+  function getLabel(
+    value: number | string | undefined,
+  ): number | string | undefined {
     const target = options.value.find((item) => `${item.value}` === `${value}`);
     return target?.label ?? value;
   }
 
   /** 适配 Select 组件的 options 结构。 */
-  const selectOptions = computed(() =>
+  const selectOptions = computed<Option[]>(() =>
     options.value.map((item) => ({ label: item.label, value: item.value })),
   );
 
   return {
     getLabel,
     load,
-    loading,
     options,
     selectOptions,
   };
